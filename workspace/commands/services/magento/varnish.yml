@@ -1,0 +1,32 @@
+group:
+  title: Magento Varnish
+  description: Switch Magento's full-page-cache application between Varnish and the built-in cache
+
+# The Varnish container itself is the optional `varnish` infra service
+# (enable with `dwe services enable varnish --apply`). These commands flip the
+# Magento config so it actually emits cacheable responses for Varnish — they are
+# wired as on_enable / on_disable hooks on the varnish service, and are also
+# runnable on their own.
+#
+# They are `type: shell` (not workflow) because service toggle hooks only accept
+# shell / script commands; they reuse services.magento.config.set + cache.flush via
+# the running dwe binary so the SQL lives in exactly one place.
+
+commands:
+  enable:
+    type: shell
+    description: Point Magento full-page cache at Varnish (caching_application=2) and flush
+    cmd: |
+      set -e
+      "$DWE_BIN" cmd services.magento.config.set --yes \
+        --set path=system/full_page_cache/caching_application --set value=2
+      "$DWE_BIN" cmd services.magento.cache.flush --yes
+
+  disable:
+    type: shell
+    description: Revert Magento full-page cache to the built-in application (caching_application=1) and flush
+    cmd: |
+      set -e
+      "$DWE_BIN" cmd services.magento.config.set --yes \
+        --set path=system/full_page_cache/caching_application --set value=1
+      "$DWE_BIN" cmd services.magento.cache.flush --yes

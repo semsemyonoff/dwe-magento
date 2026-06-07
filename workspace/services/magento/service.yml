@@ -1,0 +1,31 @@
+# Magento application service (required — part of the base docker-compose.yml).
+type: app
+container: app-magento
+icon: "🛒"
+required: true
+dir: ./services/magento
+dir_internal: /workspace
+work_dir_internal: /workspace/src
+# No published port of its own — the app is reachable only through the nginx
+# proxy (services/nginx) by hostname; nginx owns the :80 binding (APP_PORT).
+hosts:
+  web: magento.localhost
+info:
+  title: Magento
+  paths:
+    - name: "Admin"
+      path: /admin
+      icon: "🔐"
+    - name: "Profiler (SPX)"
+      path: "/?SPX_KEY=dev&SPX_UI_URI=/"
+      icon: "⚡"
+configs:
+  - env.php
+dirs:
+  - home
+  - runtime
+cli:
+  mode: auto
+  shell: bash
+  user: www-data
+  workdir: /workspace/src

@@ -1,0 +1,54 @@
+group:
+  title: Magento Cache
+  description: Magento cache helpers (`bin/magento cache:*`) for the Magento service
+
+commands:
+  flush:
+    type: service_exec
+    description: Flush the entire Magento cache (`bin/magento cache:flush`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "cache:flush"]
+
+  clean:
+    type: service_exec
+    description: Clean enabled Magento cache types (`bin/magento cache:clean`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "cache:clean"]
+
+  status:
+    type: service_exec
+    description: Show cache type status (`bin/magento cache:status`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "cache:status"]
+
+  enable:
+    type: service_exec
+    description: Enable a cache type, or all when omitted (`bin/magento cache:enable [type]`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      type:
+        type: string
+        description: Cache type to enable (omit to enable all)
+        pattern: ^[a-z_]+$
+    cmd: "bin/magento cache:enable{{ with .Params.type }} {{ . }}{{ end }}"
+
+  disable:
+    type: service_exec
+    description: Disable a cache type, or all when omitted (`bin/magento cache:disable [type]`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      type:
+        type: string
+        description: Cache type to disable (omit to disable all)
+        pattern: ^[a-z_]+$
+    cmd: "bin/magento cache:disable{{ with .Params.type }} {{ . }}{{ end }}"

@@ -1,0 +1,35 @@
+# Temporary (for pilot only)
+legacy/
+
+# DWE
+.dwe/
+# DB dumps live in backups/db/ — keep the dir, ignore the dumps
+backups/db/*
+!backups/db/.gitkeep
+# Media dumps live in backups/media/ — keep the dir, ignore the dumps
+backups/media/*
+!backups/media/.gitkeep
+services/*
+volumes/
+snapshots/
+states/
+# Only the generated root .env is ignored — per-service templates in
+# configs/services/<svc>/ ARE tracked (the deployed copy lands under
+# services/<svc>/configs/, already ignored via services/*).
+/.env
+workspace/local.yml
+workspace/docker.local.yml
+workspace/templates/*/*.local/
+
+# tools
+.ralphex/
+
+# IDE & OS
+.idea/
+.vscode/
+.zed/
+# …but template packs ship their own .vscode/ templates that must stay tracked.
+!workspace/templates/**/.vscode/
+!workspace/templates/**/.vscode/**
+*~
+.DS_Store

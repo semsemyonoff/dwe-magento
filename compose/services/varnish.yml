@@ -1,0 +1,22 @@
+# Overlay: Varnish — full-page cache in front of nginx.
+# Enabled when services.varnish.enabled = true in dwe config.
+# nginx gains a :81 listener that proxies to varnish:6081; switch Magento's
+# full_page_cache application to Varnish with `dwe cmd services.magento.varnish.enable`.
+
+services:
+  nginx:
+    ports:
+      - "${MAGENTO_VARNISH_PORT:-81}:81"
+    volumes:
+      - ./configs/nginx/templates/varnish.conf.template:/etc/nginx/templates/varnish.conf.template:ro
+
+  varnish:
+    image: "${IMAGE_VARNISH:-varnish:latest}"
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-varnish"
+    hostname: varnish
+    restart: unless-stopped
+    volumes:
+      - ./configs/varnish/default.vcl:/etc/varnish/default.vcl
+    depends_on:
+      - nginx
+    command: ["varnishd", "-F", "-f", "/etc/varnish/default.vcl", "-s", "malloc,256m", "-a", ":6081"]

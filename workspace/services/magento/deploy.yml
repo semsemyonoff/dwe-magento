@@ -1,0 +1,168 @@
+# Deploy pipeline for service: magento (Magento)
+#
+# Every step is independently idempotent and gated by filesystem / install
+# truth, so `dwe deploy run` is safe to re-run: if a step fails mid-pipeline
+# (e.g. a composer/network blip), fix the cause and re-run — only the unfinished
+# steps execute. There is intentionally NO phase-level `when:`; each step is
+# gated on its own truth so a partial install is completed, never re-installed
+# over or stranded.
+#
+# "installed" truth = the magento `'install'` key appearing in the deployed
+# env.php (services/magento/configs/env.php, symlinked into src/app/etc/env.php).
+# setup:install writes it; its presence makes Magento refuse a second install.
+#
+# Step types (set on `type:`, payload in `cmd:`):
+#   shell    — host shell command (sh -c)
+#   dwe      — dwe CLI subcommand
+#   command  — declarative command ID dispatched via command runner
+#   builtin  — engine-internal action
+
+phases:
+  - name: setup
+    description: Prepare service directories and install the Magento application
+    steps:
+      - name: create-dirs
+        type: builtin
+        cmd: service_dirs_ensure
+        with:
+          service: magento
+        description: Create service hub directories (idempotent)
+
+      - name: place-auth
+        type: command
+        cmd: app.auth-json
+        description: Generate the Magento marketplace auth.json (from magento.marketplace.*) so create-project can authenticate
+        # Generate only when missing — never clobber a developer's own auth.json.
+        when:
+          type: builtin
+          cmd: "file-missing services/magento/home/.composer/auth.json"
+
+      - name: install
+        type: command
+        cmd: app.install
+        description: Install Magento via composer create-project (community sample edition)
+        # create-project requires an EMPTY target. Only run on a fresh checkout;
+        # a partially-installed src is completed by `composer-install` (not part
+        # of the default pipeline), never re-installed over.
+        when:
+          type: builtin
+          cmd: "dir-empty services/magento/src"
+
+      - name: copy-configs
+        type: builtin
+        cmd: service_configs_copy
+        with:
+          service: magento
+          # `default` = copy only when the destination is missing; never clobber
+          # an existing env.php (after install it holds the generated install
+          # date, crypt key, and admin/search config).
+          mode: default
+        description: Copy the pre-seeded env.php into the hub (files declared in services.magento.configs)
+        check:
+          type: builtin
+          cmd: service_configs_check
+          with:
+            service: magento
+
+      - name: chown-src
+        type: command
+        cmd: services.magento.chown-src
+        description: chown /workspace/src to www-data so bin/magento and composer can write (excludes .git*)
+        # Nothing to chown on an empty src; once installed it always has content.
+        when:
+          type: builtin
+          cmd: "dir-not-empty services/magento/src"
+
+  - name: init
+    description: Initialize the application (database, install, store config, sample data)
+    steps:
+      - name: stack-up
+        type: dwe
+        cmd: "docker up --wait"
+        description: Bring the stack up (db, valkey, opensearch, app-magento) and wait until healthy
+        # setup:install validates the OpenSearch connection up-front and the app
+        # talks to Valkey + DB, so the whole stack must be reachable before it
+        # runs. Bringing app-magento up also lets the following steps `exec` into
+        # one running container instead of spawning an ephemeral one per step.
+
+      - name: db-create
+        type: command
+        cmd: services.magento.db.create
+        description: Create the application database (CREATE DATABASE IF NOT EXISTS)
+
+      - name: setup-install
+        type: command
+        cmd: services.magento.setup.install
+        description: Install Magento against OpenSearch (bin/magento setup:install)
+        # Run only when not yet installed — re-running would error ("already
+        # installed"). After this step env.php gains the `'install'` key.
+        when:
+          type: shell
+          cmd: "! grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+
+      - name: prepare-config
+        type: command
+        cmd: services.magento.config.prepare
+        description: Apply local-dev store config (mode, telemetry off, SMTP, locale, reCAPTCHA, admin security)
+        # Idempotent core_config_data upserts — only meaningful once installed.
+        when:
+          type: shell
+          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+
+      - name: disable-2fa
+        type: command
+        cmd: services.magento.module.2fa-disable
+        description: Disable the admin two-factor-auth modules (local dev convenience)
+        when:
+          type: shell
+          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+
+      - name: sample-data
+        type: command
+        cmd: services.magento.sample.deploy
+        description: Deploy Magento sample data and run setup:upgrade (once; marked by var/.dwe-sampledata)
+        # Installed AND sample data not yet deployed. The command touches the
+        # marker on success so re-runs skip it.
+        when:
+          type: shell
+          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null && test ! -f services/magento/src/var/.dwe-sampledata"
+
+      - name: di-compile
+        type: command
+        cmd: services.magento.setup.di-compile
+        description: Compile the DI configuration (bin/magento setup:di:compile)
+        continue_on_error: true
+        when:
+          type: shell
+          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+
+      - name: reindex
+        type: command
+        cmd: services.magento.indexer.reindex
+        description: Reindex all indexers (bin/magento indexer:reindex)
+        continue_on_error: true
+        when:
+          type: shell
+          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+
+  - name: finalize
+    description: Render hub-level IDE and AI-agent configs for this service
+    steps:
+      - name: render-ide
+        type: dwe
+        cmd: "render ide magento"
+        description: Render IDE config (.devcontainer, .vscode) into the hub
+      - name: render-ai
+        type: dwe
+        cmd: "render ai magento"
+        description: Render AGENTS.md + CLAUDE.md symlink into the hub
+      - name: urn-generate
+        type: command
+        cmd: services.magento.dev.urn-generate
+        description: Generate the IDE URN catalog (magento.ide.urn) into the hub
+        continue_on_error: true
+        # Off by default — runs only when magento.ide.urn is phpstorm|vscode|all.
+        # Magento is guaranteed installed here (finalize runs only after init).
+        when:
+          type: template
+          expr: '{{ ne .Raw.magento.ide.urn "" }}'

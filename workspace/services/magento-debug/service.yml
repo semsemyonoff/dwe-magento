@@ -1,0 +1,10 @@
+# Xdebug variant of the Magento service. Optional — toggled via defaults.yml / local.yml.
+type: app
+container: app-magento-debug
+icon: "🐞"
+extends: magento
+compose:
+  - compose/services/magento/debug.yml
+cli:
+  env:
+    - XDEBUG_CONFIG="cli_color=1"

@@ -1,0 +1,63 @@
+group:
+  title: App
+  description: Application-level commands
+
+commands:
+  auth-json:
+    type: shell
+    private: true
+    description: Generate the Magento Marketplace auth.json into the Magento service composer home from magento.marketplace.{username,password}
+    params:
+      username:
+        type: string
+        description: Marketplace public key (repo.magento.com username)
+        default_from: magento.marketplace.username
+        required: true
+      password:
+        type: string
+        description: Marketplace private key (repo.magento.com password)
+        default_from: magento.marketplace.password
+        required: true
+    # Values flow through env (not argv), so the keys never appear in `ps`.
+    # `$VAR` (no braces) is left for the shell — dwe only interpolates `${...}`.
+    env:
+      MAGENTO_REPO_USER: "${param.username}"
+      MAGENTO_REPO_PASS: "${param.password}"
+    messages:
+      success: "auth.json written to services/magento/home/.composer/auth.json"
+      error: "Failed to write auth.json — is magento.marketplace.{username,password} set in workspace/local.yml?"
+    cmd: |
+      set -eu
+      if [ -z "$MAGENTO_REPO_USER" ] || [ -z "$MAGENTO_REPO_PASS" ]; then
+        echo "magento.marketplace.username / .password are required — set them in workspace/local.yml" >&2
+        exit 1
+      fi
+      mkdir -p services/magento/home/.composer
+      umask 077
+      cat > services/magento/home/.composer/auth.json <<JSON
+      {
+        "http-basic": {
+          "repo.magento.com": {
+            "username": "$MAGENTO_REPO_USER",
+            "password": "$MAGENTO_REPO_PASS"
+          }
+        }
+      }
+      JSON
+
+  install:
+    type: service_run
+    private: true
+    description: Install Magento via `composer create-project` (community sample edition) into the Magento service hub
+    service: app-magento
+    user: www-data
+    workdir_from: services.magento.work_dir_internal
+    argv:
+      - php
+      - -d
+      - default_socket_timeout=3600
+      - /usr/local/bin/composer
+      - create-project
+      - --repository-url=https://repo.magento.com/
+      - "magento/project-${magento.sample.edition}-edition=${magento.sample.version}"
+      - "."

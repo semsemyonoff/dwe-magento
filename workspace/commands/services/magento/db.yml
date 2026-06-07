@@ -1,0 +1,9 @@
+commands:
+  create:
+    type: workflow
+    private: true
+    description: Create the Magento service database
+    steps:
+      - command: db.create
+        with:
+          database: "${db.database}"

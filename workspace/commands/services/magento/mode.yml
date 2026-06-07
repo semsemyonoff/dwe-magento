@@ -1,0 +1,27 @@
+group:
+  title: Magento Mode
+  description: Magento deploy-mode helpers (`bin/magento deploy:mode:*`) for the Magento service
+
+commands:
+  show:
+    type: service_exec
+    description: Show the current Magento mode (`bin/magento deploy:mode:show`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "deploy:mode:show"]
+
+  set:
+    type: service_exec
+    description: Set the Magento mode — developer / production / default (`bin/magento deploy:mode:set <mode>`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      mode:
+        type: string
+        description: Target mode
+        default_from: magento.mode
+        required: true
+        pattern: ^(developer|production|default)$
+    argv: [bin/magento, "deploy:mode:set", "${param.mode}"]

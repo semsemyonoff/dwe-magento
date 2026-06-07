@@ -1,0 +1,67 @@
+group:
+  title: Magento Admin
+  description: Magento admin-user helpers for the Magento service
+
+commands:
+  user-create:
+    type: service_exec
+    description: Create a Magento admin user (`bin/magento admin:user:create`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      user:
+        type: string
+        description: Admin username
+        default_from: admin.login
+        required: true
+      password:
+        type: string
+        description: Admin password
+        default_from: admin.password
+        required: true
+      email:
+        type: string
+        description: Admin email
+        default_from: admin.email
+        required: true
+      firstname:
+        type: string
+        description: Admin first name
+        default_from: admin.name
+        required: true
+      lastname:
+        type: string
+        description: Admin last name
+        default_from: admin.name
+        required: true
+    argv:
+      - bin/magento
+      - "admin:user:create"
+      - "--admin-user=${param.user}"
+      - "--admin-password=${param.password}"
+      - "--admin-email=${param.email}"
+      - "--admin-firstname=${param.firstname}"
+      - "--admin-lastname=${param.lastname}"
+
+  unlock:
+    type: service_exec
+    description: Unlock an admin account locked after failed logins (`bin/magento admin:user:unlock <user>`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      user:
+        type: string
+        description: Admin username to unlock
+        default_from: admin.login
+        required: true
+    argv: [bin/magento, "admin:user:unlock", "${param.user}"]
+
+  list:
+    type: service_exec
+    description: List admin users (`n98-magerun2 admin:user:list`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [n98-magerun2, "admin:user:list"]

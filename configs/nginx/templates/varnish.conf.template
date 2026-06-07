@@ -1,0 +1,12 @@
+server {
+    listen 81;
+    server_name ${APP_HOST};
+
+    location / {
+        proxy_pass http://varnish:6081;
+        proxy_set_header Host $host;
+        proxy_set_header  X-Real-IP $remote_addr;
+        proxy_buffers     16 16k;
+        proxy_buffer_size 32k;
+    }
+}

@@ -1,0 +1,38 @@
+group:
+  title: Magento Sample Data
+  description: Magento sample-data helpers for the Magento service
+
+commands:
+  deploy:
+    type: service_exec
+    description: Deploy Magento sample data, run setup:upgrade, then mark it done (`bin/magento sampledata:deploy`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    # default_socket_timeout is raised because sampledata:deploy pulls a large
+    # set of sample packages from repo.magento.com. The marker file lets the
+    # deploy pipeline skip this once-only step on re-runs.
+    argv:
+      - sh
+      - -c
+      - |
+        set -e
+        php -d default_socket_timeout=3600 bin/magento sampledata:deploy -vvv
+        bin/magento setup:upgrade
+        touch var/.dwe-sampledata
+
+  remove:
+    type: service_exec
+    description: Remove Magento sample data (`bin/magento sampledata:remove`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    confirmation: true
+    confirmation_text: "This removes the installed Magento sample data. Continue?"
+    argv:
+      - sh
+      - -c
+      - |
+        set -e
+        bin/magento sampledata:remove
+        rm -f var/.dwe-sampledata

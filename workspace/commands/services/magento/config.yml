@@ -1,0 +1,127 @@
+group:
+  title: Magento Config
+  description: Magento store configuration helpers (core_config_data) for the Magento service
+
+commands:
+  set:
+    type: service_exec
+    description: Upsert a core_config_data row (INSERT ... ON DUPLICATE KEY UPDATE)
+    service: db
+    mode: exec-or-run
+    params:
+      path:
+        type: string
+        description: Config path (e.g. web/seo/use_rewrites)
+        required: true
+        pattern: ^[A-Za-z0-9/_]+$
+      value:
+        type: string
+        description: Config value
+        required: true
+      scope:
+        type: string
+        description: Config scope
+        default: default
+        pattern: ^[a-z]+$
+      scope_id:
+        type: string
+        description: Config scope id
+        default: "0"
+        pattern: ^[0-9]+$
+    env:
+      MYSQL_PWD: "${db.password}"
+    messages:
+      success: "Config `${param.path}` (scope ${param.scope}/${param.scope_id}) set to `${param.value}`."
+      error: "Failed to set config `${param.path}`."
+    cmd: >-
+      mariadb -u${db.user} -D ${db.database}
+      -e "INSERT INTO core_config_data (scope, scope_id, path, value)
+      VALUES ('${param.scope}', '${param.scope_id}', '${param.path}', '${param.value}')
+      ON DUPLICATE KEY UPDATE value = '${param.value}';"
+
+  show:
+    type: service_exec
+    description: Show stored system configuration values, all or under a path (`bin/magento config:show [path]`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      path:
+        type: string
+        description: Config path to show (e.g. web/seo; omit for all)
+        pattern: ^[A-Za-z0-9/_]+$
+    cmd: "bin/magento config:show{{ with .Params.path }} {{ . }}{{ end }}"
+
+  prepare:
+    type: workflow
+    description: Apply the standard local-dev store configuration (mode, telemetry off, SMTP→mailpit, locale, reCAPTCHA off, admin security)
+    steps:
+      - command: services.magento.mode.set
+        with:
+          mode: "${magento.mode}"
+      - command: services.magento.config.set
+        with:
+          path: admin/usage/enabled
+          value: "0"
+      - command: services.magento.config.set
+        with:
+          path: system/smtp/transport
+          value: smtp
+      - command: services.magento.config.set
+        with:
+          path: system/smtp/host
+          value: "${mail.host}"
+      - command: services.magento.config.set
+        with:
+          path: system/smtp/port
+          value: "${mail.port}"
+      - command: services.magento.config.set
+        with:
+          path: general/locale/firstday
+          value: "${magento.locale.firstday}"
+      - command: services.magento.config.set
+        with:
+          path: general/locale/weight_unit
+          value: "${magento.locale.weight_unit}"
+      - command: services.magento.config.set
+        with:
+          path: msp_securitysuite_recaptcha/frontend/enabled
+          value: "${magento.recaptcha.frontend}"
+      - command: services.magento.config.set
+        with:
+          path: msp_securitysuite_recaptcha/backend/enabled
+          value: "${magento.recaptcha.backend}"
+      - command: services.magento.config.set
+        with:
+          path: admin/security/session_lifetime
+          value: "${magento.admin_security.session_lifetime}"
+      - command: services.magento.config.set
+        with:
+          path: admin/security/password_lifetime
+          value: "${magento.admin_security.password_lifetime}"
+
+  search:
+    type: workflow
+    description: Point Magento's catalog search at the OpenSearch container and flush the cache
+    steps:
+      - command: services.magento.config.set
+        with:
+          path: catalog/search/engine
+          value: "${search.engine}"
+      - command: services.magento.config.set
+        with:
+          path: catalog/search/opensearch_server_hostname
+          value: "${search.hostname}"
+      - command: services.magento.config.set
+        with:
+          path: catalog/search/opensearch_server_port
+          value: "${search.port}"
+      - command: services.magento.config.set
+        with:
+          path: catalog/search/opensearch_index_prefix
+          value: "${search.index_prefix}"
+      - command: services.magento.config.set
+        with:
+          path: catalog/search/opensearch_server_timeout
+          value: "${search.timeout}"
+      - command: services.magento.cache.flush

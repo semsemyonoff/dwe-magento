@@ -1,0 +1,135 @@
+# Base compose: mandatory infrastructure (nginx, db, valkey, opensearch, app-magento).
+# Always started. Overlays in compose/ add optional services and tools.
+
+name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}"
+
+volumes:
+  db:
+  opensearch_data:
+  composer_cache:
+    external: true
+    name: dwe_composer_cache
+  # Per-service named volume for VS Code Server data. Lives outside Docker
+  # Desktop's `fakeowner` bind-mount FS, which corrupts files created with
+  # mode 0400 (umask 377) — the exact pattern Dev Containers uses for the
+  # connection-token handshake. Without this, attaching a dev container to
+  # app-magento from VS Code on Docker Desktop fails with `echo: I/O error`.
+  vscode_server_magento:
+
+networks:
+  default:
+    name: ${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1420
+
+services:
+  nginx:
+    image: "${IMAGE_NGINX:-nginx:1.28}"
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-nginx"
+    restart: unless-stopped
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "${APP_PORT:-80}:80"
+    volumes:
+      - ./services/magento/src:/workspace/src:ro
+      - ./configs/nginx/templates/common/backend.conf.template:/etc/nginx/templates/backend.conf.template:ro
+      - ./configs/nginx/templates/services/magento.conf.template:/etc/nginx/templates/magento.conf.template:ro
+    environment:
+      APP_HOST: "${APP_HOST:-magento.localhost}"
+      XDEBUG_IDEKEY: "${XDEBUG_IDEKEY:-PHPSTORM}"
+      DEBUG_BACKEND: "${DEBUG_BACKEND:-app-magento}"
+    depends_on:
+      app-magento:
+        condition: service_healthy
+
+  db:
+    image: "${IMAGE_DB:-mariadb:12.3}"
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-db"
+    hostname: db
+    restart: unless-stopped
+    command: --max_allowed_packet=67108864
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 2s
+      retries: 50
+      start_period: 5s
+    ports:
+      - "${DB_PORT:-13306}:3306"
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-root}"
+
+  valkey:
+    image: "${IMAGE_VALKEY:-valkey/valkey:9}"
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-valkey"
+    hostname: valkey
+    restart: unless-stopped
+    ports:
+      - "${VALKEY_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 50
+      start_period: 5s
+
+  opensearch:
+    image: "${IMAGE_OPENSEARCH:-opensearchproject/opensearch:3}"
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-opensearch"
+    hostname: opensearch
+    restart: unless-stopped
+    ports:
+      - "${SEARCH_PORT:-9200}:9200"
+    volumes:
+      - ./configs/opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:9200/_cluster/health | grep -E '\"status\":\"(green|yellow)\"'"]
+      interval: 3s
+      timeout: 2s
+      retries: 50
+      start_period: 5s
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+      - plugins.security.disabled=true
+      - node.name=opensearch-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD:-Str0ng!Passw0rd}
+
+  app-magento:
+    build:
+      context: images/services/magento
+      args:
+        UID: "${UID:-1000}"
+        GID: "${GID:-1000}"
+        MAGENTO_IMAGE_TAG: "${MAGENTO_IMAGE_TAG:-8.5}"
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-app-magento"
+    hostname: magento
+    restart: unless-stopped
+    working_dir: /workspace/src
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - "${APP_HOST:-magento.localhost}:host-gateway"
+    volumes:
+      - ./services/magento:/workspace
+      - ./services/magento/home:/home/www-data
+      - vscode_server_magento:/home/www-data/.vscode-server
+      - ~/.ssh:/home/www-data/.ssh:ro
+      - ./services/magento/configs:/tmp/app-configs
+      - composer_cache:/home/www-data/.composer/cache
+    environment:
+      COMPOSER_CACHE_DIR: /home/www-data/.composer/cache
+      UPDATE_UID_GID: "${UPDATE_UID_GID:-false}"
+    env_file:
+      - ./configs/env/default.env
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy

@@ -1,0 +1,27 @@
+# Varnish — full-page cache in front of nginx. Optional infra.
+# Reachable on the :81 nginx listener (MAGENTO_VARNISH_PORT) once enabled.
+type: infra
+container: varnish
+icon: "🧱"
+compose:
+  - compose/services/varnish.yml
+ports:
+  http: 81
+
+# Toggle automation: flip Magento's full_page_cache application along with the
+# container, then restart so the :81 listener / varnish container appear/vanish.
+#   enable  → after the toggle write, point Magento at Varnish (caching_application=2)
+#   disable → before the toggle write, revert Magento to the built-in cache (=1)
+# `requires: restart` brings the compose overlay up/down (deploy is not needed —
+# Varnish has no service hub or install step).
+on_enable:
+  requires: restart
+  after:
+    - services.magento.varnish.enable
+on_disable:
+  requires: restart
+  before:
+    - services.magento.varnish.disable
+notes:
+  enable: "Magento full-page cache is switched to Varnish (caching_application=2) and flushed."
+  disable: "Magento full-page cache is reverted to the built-in application (caching_application=1) and flushed."

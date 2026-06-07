@@ -1,0 +1,249 @@
+# Versioned project defaults (layer 2 of the merged config).
+# Merged on top of workspace.yml and may be overridden by workspace/local.yml.
+# This file IS tracked by git.
+
+# Optional service toggles. Structural service definitions live in
+# workspace/services/<name>/service.yml. Required services (magento, and the base
+# infra: db/valkey/opensearch in docker-compose.yml) are always on — no toggle.
+services:
+  magento-debug:
+    enabled: true
+  dbgate:
+    enabled: false
+  mailpit:
+    enabled: true
+  opensearch-dashboards:
+    enabled: false
+  elasticvue:
+    enabled: false
+  redis-insight:
+    enabled: false
+  varnish:
+    enabled: false
+
+debug:
+  idekey: PHPSTORM
+
+runtime:
+  use_https: false
+  ports:
+    db: 13306
+    valkey: 6379
+    search: 9200
+  spx:
+    path: "?SPX_KEY=dev&SPX_UI_URI=/"
+
+db:
+  database: magento
+  password: root
+  user: root
+  backup_dir: backups/db
+
+valkey:
+  host: valkey
+  port: 6379
+
+# Search — OpenSearch only (the legacy elasticsearch/opensearch engine choice
+# was removed during the migration; opensearch is the single supported engine).
+search:
+  engine: opensearch
+  hostname: opensearch
+  port: 9200
+  index_prefix: magento2
+  timeout: 15
+
+# Magento admin user created by setup:install.
+admin:
+  name: Admin
+  login: admin
+  password: admin123
+  email: admin@example.com
+
+# Magento application settings applied during deploy (setup:install flags +
+# core_config_data writes in the prepare-config step).
+magento:
+  mode: developer
+  base_url: http://magento.localhost/
+  use_rewrites: 1
+  image_tag: "8.5"
+  # repo.magento.com credentials (Adobe Commerce Marketplace access keys).
+  # REQUIRED — they are intentionally blank here and must be set in
+  # workspace/local.yml (gitignored). On deploy, the `app.auth-json` command
+  # generates services/magento/home/.composer/auth.json from these values so
+  # composer can authenticate against repo.magento.com.
+  # Get keys at https://commerce.adobe.com → My Profile → Access Keys
+  # (Public Key = username, Private Key = password).
+  marketplace:
+    username: ""
+    password: ""
+  sample:
+    edition: community
+    version: 2.4.9
+  locale:
+    code: en_US
+    timezone: UTC
+    firstday: 1
+    weight_unit: kgs
+  currency:
+    base: USD
+    default: USD
+    allow: USD
+  recaptcha:
+    frontend: 0
+    backend: 0
+  admin_security:
+    session_lifetime: 86400
+    password_lifetime: 0
+  # IDE URN catalog generation (bin/magento dev:urn-catalog:generate) on deploy.
+  # "" = off (default). Set to phpstorm | vscode | all to generate the XML
+  # autocompletion catalog into the service hub (.idea/misc.xml for PhpStorm,
+  # .vscode/urn-catalog.xml for VS Code) during the deploy finalize phase.
+  # Also runnable on demand:
+  #   dwe cmd services.magento.dev.urn-generate --set ide=phpstorm|vscode|all
+  ide:
+    urn: ""
+
+mail:
+  host: mailpit
+  port: 1025
+
+compose:
+  base: docker-compose.yml
+
+# Declarative export spec for the generated .env artifact.
+# dwe render env  →  reads exports.env and renders .env accordingly.
+#
+# Each rule:
+#   name     — env variable name
+#   from     — dot-path into the effective (merged) config
+#   default  — fallback when the path is absent
+#   required — error if path is absent and default is empty
+#   format   — string (default) | bool | int
+#   when     — dot-path; rule is skipped when the value at this path is falsy
+exports:
+  env:
+    - name: USE_HTTPS
+      from: runtime.use_https
+      format: bool
+
+    - name: APP_PORT
+      from: services.nginx.ports.http
+      format: int
+
+    - name: APP_HOST
+      from: services.magento.hosts.web
+
+    - name: DB_PORT
+      from: runtime.ports.db
+      format: int
+
+    - name: DB_DATABASE
+      from: db.database
+
+    - name: DB_PASSWORD
+      from: db.password
+
+    - name: DB_USER
+      from: db.user
+
+    - name: VALKEY_PORT
+      from: runtime.ports.valkey
+      format: int
+
+    - name: SEARCH_PORT
+      from: runtime.ports.search
+      format: int
+
+    - name: MAGENTO_IMAGE_TAG
+      from: magento.image_tag
+
+    - name: MAGENTO_VARNISH_PORT
+      from: services.varnish.ports.http
+      format: int
+      when: services.varnish.enabled
+
+    - name: DBGATE_PORT
+      from: services.dbgate.ports.http
+      format: int
+      when: services.dbgate.enabled
+
+    - name: DBGATE_HOST
+      from: services.dbgate.hosts.web
+      when: services.dbgate.enabled
+
+    - name: MAILPIT_PORT
+      from: services.mailpit.ports.http
+      format: int
+      when: services.mailpit.enabled
+
+    - name: MAILPIT_HOST
+      from: services.mailpit.hosts.web
+      when: services.mailpit.enabled
+
+    - name: OPENSEARCH_DASHBOARDS_PORT
+      from: services.opensearch-dashboards.ports.http
+      format: int
+      when: services.opensearch-dashboards.enabled
+
+    - name: OPENSEARCH_DASHBOARDS_HOST
+      from: services.opensearch-dashboards.hosts.web
+      when: services.opensearch-dashboards.enabled
+
+    - name: ELASTICVUE_PORT
+      from: services.elasticvue.ports.http
+      format: int
+      when: services.elasticvue.enabled
+
+    - name: ELASTICVUE_HOST
+      from: services.elasticvue.hosts.web
+      when: services.elasticvue.enabled
+
+    - name: REDIS_INSIGHT_PORT
+      from: services.redis-insight.ports.http
+      format: int
+      when: services.redis-insight.enabled
+
+    - name: REDIS_INSIGHT_HOST
+      from: services.redis-insight.hosts.web
+      when: services.redis-insight.enabled
+
+    - name: TOOL_DBGATE
+      from: services.dbgate.enabled
+      format: bool
+
+    - name: TOOL_MAILPIT
+      from: services.mailpit.enabled
+      format: bool
+
+    - name: TOOL_OPENSEARCH_DASHBOARDS
+      from: services.opensearch-dashboards.enabled
+      format: bool
+
+    - name: TOOL_ELASTICVUE
+      from: services.elasticvue.enabled
+      format: bool
+
+    - name: TOOL_REDIS_INSIGHT
+      from: services.redis-insight.enabled
+      format: bool
+
+    - name: SPX_PATH
+      from: runtime.spx.path
+
+    - name: XDEBUG_IDEKEY
+      from: debug.idekey
+
+    - name: STATE
+      from: state
+
+    - name: PROJECT_PREFIX
+      from: project.prefix
+
+    - name: PROJECT_NAME
+      from: project.name
+
+    - name: APP_MAGENTO_CONTAINER
+      from: services.magento.container
+
+    - name: APP_MAGENTO_DIR_INTERNAL
+      from: services.magento.work_dir_internal

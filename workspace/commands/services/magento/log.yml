@@ -1,0 +1,34 @@
+group:
+  title: Magento Logs
+  description: Inspect and manage Magento log files inside the app-magento container (/workspace/src/var/log)
+
+commands:
+  list:
+    type: service_exec
+    description: List log files inside /workspace/src/var/log
+    service: app-magento
+    mode: exec-or-fail
+    argv: [ls, -lh, /workspace/src/var/log]
+
+  tail:
+    type: service_exec
+    description: Follow a log file with `tail -F` (Ctrl-C to stop). Defaults to system.log.
+    service: app-magento
+    mode: exec-or-fail
+    params:
+      file:
+        type: string
+        description: Log filename inside /workspace/src/var/log
+        default: system.log
+        pattern: ^[A-Za-z0-9._-]+$
+    argv: [tail, -F, "/workspace/src/var/log/${param.file}"]
+
+  clean:
+    type: service_exec
+    description: Truncate every *.log file under /workspace/src/var/log (keeps file handles intact)
+    service: app-magento
+    mode: exec-or-fail
+    argv:
+      - sh
+      - -c
+      - 'for f in /workspace/src/var/log/*.log; do [ -e "$f" ] && : > "$f"; done'

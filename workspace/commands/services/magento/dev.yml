@@ -1,0 +1,104 @@
+group:
+  title: Magento Dev
+  description: Magento developer helpers (URN catalog, REPL, template hints, query log, DI info)
+
+commands:
+  console:
+    type: service_exec
+    description: Open an interactive PHP REPL with a bootstrapped Magento app (`n98-magerun2 dev:console`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [n98-magerun2, "dev:console"]
+
+  template-hints:
+    type: service_exec
+    description: Toggle/inspect frontend template path hints (`bin/magento dev:template-hints:<enable|disable|status>`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      action:
+        type: string
+        widget: select
+        description: enable, disable, or status
+        default: status
+        required: true
+        options: [enable, disable, status]
+    cmd: "bin/magento dev:template-hints:{{ .Params.action }}"
+
+  query-log:
+    type: service_exec
+    description: Enable/disable DB query logging (`bin/magento dev:query-log:<enable|disable>`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      action:
+        type: string
+        widget: select
+        description: enable or disable
+        required: true
+        options: [enable, disable]
+    cmd: "bin/magento dev:query-log:{{ .Params.action }}"
+
+  di-info:
+    type: service_exec
+    description: Show the resolved DI configuration for a class (`bin/magento dev:di:info <Class>`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      class:
+        type: string
+        description: Fully-qualified class/interface name (e.g. Magento\\Catalog\\Api\\ProductRepositoryInterface)
+        required: true
+    argv: [bin/magento, "dev:di:info", "${param.class}"]
+
+  urn-generate:
+    type: service_exec
+    description: Generate the Magento URN catalog for IDE XML autocompletion and place it in the service hub (.idea/misc.xml for PhpStorm, .vscode/urn-catalog.xml for VS Code)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      ide:
+        type: string
+        widget: select
+        description: Target IDE — phpstorm, vscode, or all
+        default_from: magento.ide.urn
+        required: true
+        options:
+          - { value: phpstorm, label: "PhpStorm (.idea/misc.xml)" }
+          - { value: vscode, label: "VS Code (.vscode/urn-catalog.xml)" }
+          - { value: all, label: "Both" }
+    # The value flows through env so the cmd body uses plain `$IDE` — dwe only
+    # interpolates `${...}`, so `$IDE` / `$PROJECT_DIR$` are left for the shell.
+    env:
+      IDE: "${param.ide}"
+    # The hub root is mounted at /workspace and the app code at /workspace/src.
+    # IDEs open the hub root, so the generated catalog (whose paths Magento makes
+    # relative to the magento root = src) is rewritten to prefix `src/`, then the
+    # file is dropped into the hub's .idea / .vscode dir.
+    cmd: |
+      set -eu
+      fix_paths() { sed -i -E 's#(\.\./|\$PROJECT_DIR\$/)#\1src/#g' "$1"; }
+      gen_phpstorm() {
+        php bin/magento dev:urn-catalog:generate --ide=phpstorm /tmp/dwe-misc.xml
+        fix_paths /tmp/dwe-misc.xml
+        mkdir -p /workspace/.idea
+        mv /tmp/dwe-misc.xml /workspace/.idea/misc.xml
+        echo "PhpStorm URN catalog → services/magento/.idea/misc.xml"
+      }
+      gen_vscode() {
+        php bin/magento dev:urn-catalog:generate --ide=vscode /tmp/dwe-urn.xml
+        fix_paths /tmp/dwe-urn.xml
+        mkdir -p /workspace/.vscode
+        mv /tmp/dwe-urn.xml /workspace/.vscode/urn-catalog.xml
+        echo "VS Code URN catalog → services/magento/.vscode/urn-catalog.xml"
+      }
+      case "$IDE" in
+        phpstorm) gen_phpstorm ;;
+        vscode)   gen_vscode ;;
+        all)      gen_phpstorm; gen_vscode ;;
+      esac

@@ -1,0 +1,30 @@
+# Overlay: RedisInsight — Redis-protocol GUI for the Magento Valkey cache
+# (db 0/1) and session (db 2). RedisInsight talks to Valkey unchanged.
+# Enabled when services.redis-insight.enabled = true in dwe config.
+#
+# EULA acceptance + local-Valkey registration is done by the private command
+# `services.redis-insight.init`, invoked from workspace/lifecycle.yml#run after
+# the stack is healthy. No init container is declared here; GUI state persists
+# in the `redisinsight` volume so the seeding only happens on a fresh install.
+
+volumes:
+  redisinsight:
+
+services:
+  nginx:
+    volumes:
+      - ./configs/nginx/templates/tools/redis.conf.template:/etc/nginx/templates/redis.conf.template:ro
+    environment:
+      REDIS_INSIGHT_HOST: "${REDIS_INSIGHT_HOST:-redis.localhost}"
+
+  redis-insight:
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-redis-insight"
+    image: "${IMAGE_REDISINSIGHT:-redis/redisinsight:latest}"
+    hostname: redis-insight
+    restart: unless-stopped
+    ports:
+      - "${REDIS_INSIGHT_PORT:-5540}:5540"
+    volumes:
+      - redisinsight:/data
+    depends_on:
+      - valkey

@@ -1,0 +1,78 @@
+group:
+  title: Magento Service
+  description: Commands for the Magento application service
+
+# Sub-groups live in workspace/commands/services/magento/ (IDs: services.magento.<file>.<key>):
+#   db.yml          → services.magento.db.*          (create [private])
+#   setup.yml       → services.magento.setup.*       (install, upgrade, di-compile, schema/data upgrade, static-content-deploy, db-status)
+#   cache.yml       → services.magento.cache.*       (flush, clean, status, enable, disable)
+#   indexer.yml     → services.magento.indexer.*     (reindex, status, info, reset)
+#   mode.yml        → services.magento.mode.*        (show, set)
+#   module.yml      → services.magento.module.*      (enable, disable, status, 2fa-disable, 2fa-enable)
+#   sample.yml      → services.magento.sample.*      (deploy, remove)
+#   config.yml      → services.magento.config.*      (prepare, search, set, show)
+#   dev.yml         → services.magento.dev.*         (urn-generate, console, template-hints, query-log, di-info)
+#   admin.yml       → services.magento.admin.*       (user-create, unlock, list)
+#   maintenance.yml → services.magento.maintenance.* (enable, disable, status)
+#   cron.yml        → services.magento.cron.*        (run, install, remove)
+#   queue.yml       → services.magento.queue.*       (list, start)
+#   catalog.yml     → services.magento.catalog.*     (images-resize)
+#   sys.yml         → services.magento.sys.*         (info, check) — via n98-magerun2
+#   varnish.yml     → services.magento.varnish.*     (enable, disable)
+#   log.yml         → services.magento.log.*         (list, tail, clean)
+
+commands:
+  chown-src:
+    type: service_run
+    private: true
+    description: |
+      chown /workspace/src to www-data so bin/magento / composer can write
+      (excludes `.git*`). Runs as root in a throwaway container, so it works
+      before the stack is brought up.
+    service: app-magento
+    user: root
+    workdir_from: services.magento.work_dir_internal
+    # Prune every `.git` dir at any depth: git pack files (.git/objects/**) are
+    # owned by assorted uids/modes (often 0444) and chown on them fails on macOS
+    # Docker Desktop virtiofs even as root; nested .git dirs also land inside
+    # vendor/**/.git via composer. `find .` runs relative to the workdir.
+    argv:
+      - sh
+      - -c
+      - |
+        set -e
+        find . -name '.git' -prune -o -print0 \
+          | xargs -0 -r -P 8 -n 100 chown www-data:www-data
+        find . -name '.git' -prune -o -print0 \
+          | xargs -0 -r -P 8 -n 100 chmod g=u
+
+  composer-install:
+    type: service_exec
+    description: Install PHP dependencies via Composer
+    service: app-magento
+    user: www-data
+    workdir_from: services.magento.work_dir_internal
+    mode: exec-or-run
+    argv:
+      - php
+      - -d
+      - default_socket_timeout=3600
+      - /usr/local/bin/composer
+      - install
+      - --no-interaction
+      - -v
+
+  bootstrap:
+    type: workflow
+    description: Full bootstrap — start db, create database, install Magento (opensearch), prepare config, disable 2FA, deploy sample data, compile, reindex
+    steps:
+      - command: db.start
+      - command: services.magento.db.create
+      - command: services.magento.setup.install
+      - command: services.magento.config.prepare
+      - command: services.magento.module.2fa-disable
+      - command: services.magento.sample.deploy
+      - command: services.magento.setup.di-compile
+        continue_on_error: true
+      - command: services.magento.indexer.reindex
+        continue_on_error: true

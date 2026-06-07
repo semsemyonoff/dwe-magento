@@ -1,0 +1,34 @@
+# Lifecycle pipeline for `dwe run` / `dwe restart`.
+#
+# Only `run:` is defined — `dwe stop` falls back to the built-in default stop
+# pipeline (auto-reap daemons + docker down). The run pipeline mirrors the
+# default (docker up --wait, show info) and adds a post-up `tools-init` phase
+# that bootstraps optional tools which need API seeding after they are healthy.
+
+run:
+  update:
+    mode: off
+  show_info: true
+  final_message: "Project is ready for work!"
+  phases:
+    - name: start
+      description: Start containers and wait for health
+      steps:
+        - name: up
+          type: dwe
+          cmd: "docker up --wait"
+          description: Start all containers and wait until healthy
+
+    - name: tools-init
+      description: Initialize optional tools that need post-up bootstrap
+      steps:
+        - name: redis-insight
+          description: Accept EULA + register the Magento Valkey cache/session in the GUI
+          # redis-insight has no compose healthcheck, so the init script polls
+          # its API itself. Gate on the toggle; never fail the run on a tool blip.
+          when:
+            type: template
+            expr: '{{ (index .Services "redis-insight").Enabled }}'
+          type: command
+          cmd: services.redis-insight.init
+          continue_on_error: true

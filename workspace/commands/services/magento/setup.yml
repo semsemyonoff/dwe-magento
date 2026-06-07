@@ -1,0 +1,106 @@
+group:
+  title: Magento Setup
+  description: Magento `bin/magento setup:*` helpers for the Magento service
+
+commands:
+  install:
+    type: service_exec
+    description: Install Magento against the OpenSearch search engine (`bin/magento setup:install`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    # OpenSearch is the only supported engine (the legacy elasticsearch/opensearch
+    # choice was removed during the migration). Locale flags are optional params
+    # defaulting from config (en_US / USD / UTC) — override per-install with e.g.
+    # `--set language=ru_RU --set currency=RUB --set timezone=Europe/Moscow`.
+    params:
+      language:
+        type: string
+        description: Store language / locale code (e.g. en_US)
+        default_from: magento.locale.code
+      currency:
+        type: string
+        description: Base currency code (e.g. USD)
+        default_from: magento.currency.base
+      timezone:
+        type: string
+        description: Store timezone (e.g. UTC)
+        default_from: magento.locale.timezone
+    argv:
+      - bin/magento
+      - setup:install
+      - "--base-url=${magento.base_url}"
+      - "--db-host=db"
+      - "--db-name=${db.database}"
+      - "--db-user=${db.user}"
+      - "--db-password=${db.password}"
+      - "--admin-firstname=${admin.name}"
+      - "--admin-lastname=${admin.name}"
+      - "--admin-email=${admin.email}"
+      - "--admin-user=${admin.login}"
+      - "--admin-password=${admin.password}"
+      - "--language=${param.language}"
+      - "--currency=${param.currency}"
+      - "--timezone=${param.timezone}"
+      - "--use-rewrites=${magento.use_rewrites}"
+      - "--search-engine=${search.engine}"
+      - "--opensearch-host=${search.hostname}"
+      - "--opensearch-port=${search.port}"
+      - "--opensearch-index-prefix=${search.index_prefix}"
+      - "--opensearch-timeout=${search.timeout}"
+
+  upgrade:
+    type: service_exec
+    description: Apply schema + data updates (`bin/magento setup:upgrade`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "setup:upgrade"]
+
+  schema-upgrade:
+    type: service_exec
+    description: Apply schema updates only (`bin/magento setup:db-schema:upgrade`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "setup:db-schema:upgrade"]
+
+  data-upgrade:
+    type: service_exec
+    description: Apply data updates only (`bin/magento setup:db-data:upgrade`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "setup:db-data:upgrade"]
+
+  di-compile:
+    type: service_exec
+    description: Compile the dependency-injection configuration (`bin/magento setup:di:compile`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "setup:di:compile"]
+
+  static-content-deploy:
+    type: service_exec
+    description: Deploy static view files; pass locales and use -f to force in developer mode (`bin/magento setup:static-content:deploy`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      locales:
+        type: string
+        description: Space-separated locales to deploy (e.g. "en_US ru_RU"; omit for the default)
+      force:
+        type: bool
+        description: Force deployment even in developer mode (-f)
+        default: true
+    cmd: "bin/magento setup:static-content:deploy{{ if .Params.force }} -f{{ end }}{{ with .Params.locales }} {{ . }}{{ end }}"
+
+  db-status:
+    type: service_exec
+    description: Check whether the DB schema/data need an upgrade (`bin/magento setup:db:status`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "setup:db:status"]

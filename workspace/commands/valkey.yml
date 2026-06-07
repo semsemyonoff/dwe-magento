@@ -1,0 +1,31 @@
+group:
+  title: Valkey
+  description: Valkey cache/session container helpers (Redis-protocol compatible)
+
+commands:
+  flush:
+    type: service_exec
+    description: Flush all Valkey databases (`valkey-cli FLUSHALL`)
+    service: valkey
+    mode: exec-or-run
+    confirmation: true
+    confirmation_text: "This flushes ALL Valkey databases (cache + sessions). Continue?"
+    argv: [valkey-cli, FLUSHALL]
+
+  cli:
+    type: service_exec
+    description: Open an interactive valkey-cli; pass `--set db=N` to select a database
+    service: valkey
+    mode: exec-or-run
+    params:
+      db:
+        type: int
+        description: Valkey database index to select (omit for db 0)
+    cmd: "valkey-cli{{ if .Params.db }} -n {{ .Params.db }}{{ end }}"
+
+  monitor:
+    type: service_exec
+    description: Stream every command the Valkey server receives (`valkey-cli MONITOR`)
+    service: valkey
+    mode: exec-or-run
+    argv: [valkey-cli, MONITOR]

@@ -1,0 +1,24 @@
+group:
+  title: Redis Insight
+  description: Redis Insight GUI helpers (internal — invoked from the run pipeline).
+  hide: '{{ not (index .Raw.services "redis-insight").enabled }}'
+
+commands:
+  init:
+    type: shell
+    private: true
+    description: |
+      Accept the EULA and register the local Magento Valkey cache (db 0) and
+      session (db 2) instances in the Redis Insight GUI. Invoked from the run
+      pipeline (workspace/lifecycle.yml) after the stack is healthy.
+    # Runs a throwaway curl container on the compose project network so it can
+    # reach redis-insight by service hostname. NETWORK matches the network name
+    # in docker-compose.yml (networks.default.name = ${PROJECT_PREFIX}-${PROJECT_NAME}).
+    env:
+      NETWORK: "${project.prefix}-${project.name}"
+    cmd: |
+      set -eu
+      docker run --rm -i \
+        --network="$NETWORK" \
+        --entrypoint sh \
+        curlimages/curl:latest < workspace/scripts/redis-insight/init.sh

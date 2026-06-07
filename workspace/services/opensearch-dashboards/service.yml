@@ -1,0 +1,10 @@
+# OpenSearch Dashboards — web UI for inspecting OpenSearch indices. Optional tool.
+type: tool
+container: opensearch-dashboards
+icon: "📊"
+compose:
+  - compose/tools/opensearch-dashboards.yml
+ports:
+  http: 5612
+hosts:
+  web: opensearch.localhost

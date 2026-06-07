@@ -1,0 +1,33 @@
+group:
+  title: Magento Cron
+  description: Magento cron helpers (`bin/magento cron:*`) for the magento service
+
+commands:
+  run:
+    type: service_exec
+    description: Run scheduled cron jobs now, optionally only one group (`bin/magento cron:run [--group=...]`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      group:
+        type: string
+        description: Cron group to run (omit to run all, e.g. index, default, consumers)
+        pattern: ^[a-z_]+$
+    cmd: "bin/magento cron:run{{ with .Params.group }} --group={{ . }}{{ end }}"
+
+  install:
+    type: service_exec
+    description: Install the crontab for the container user (`bin/magento cron:install`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "cron:install"]
+
+  remove:
+    type: service_exec
+    description: Remove Magento tasks from the crontab (`bin/magento cron:remove`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "cron:remove"]

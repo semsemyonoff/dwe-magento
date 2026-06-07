@@ -1,0 +1,29 @@
+group:
+  title: Magento Queue
+  description: Magento message-queue consumer helpers (`bin/magento queue:consumers:*`) for the magento service
+
+commands:
+  list:
+    type: service_exec
+    description: List the registered message-queue consumers (`bin/magento queue:consumers:list`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "queue:consumers:list"]
+
+  start:
+    type: service_exec
+    description: Start a message-queue consumer, optionally bounded by message count (`bin/magento queue:consumers:start <name> [--max-messages=N]`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      name:
+        type: string
+        description: Consumer name (see `queue.list`)
+        required: true
+        pattern: ^[A-Za-z0-9_.]+$
+      max_messages:
+        type: int
+        description: Process at most this many messages then exit (omit to run until stopped)
+    cmd: "bin/magento queue:consumers:start {{ .Params.name }}{{ if .Params.max_messages }} --max-messages={{ .Params.max_messages }}{{ end }}"

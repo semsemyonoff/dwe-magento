@@ -1,0 +1,51 @@
+# Interactive setup wizard. Runs on `dwe deploy` for a fresh project (no / empty
+# workspace/local.yml): the answers are deep-merged into local.yml (gitignored),
+# then deploy proceeds. Use it to collect the per-developer values the deploy
+# needs — the required Marketplace credentials and the store locale.
+# See `dwe docs show reference/config/setup --lang en`.
+
+questions:
+  - id: marketplace-username
+    type: input
+    title: Magento Marketplace public key
+    description: repo.magento.com username (Adobe Commerce → My Profile → Access Keys → Public Key). Required to download Magento.
+    required: true
+    writes: magento.marketplace.username
+    validate:
+      preset: non-empty
+
+  - id: marketplace-password
+    type: input
+    title: Magento Marketplace private key
+    description: repo.magento.com password (Access Keys → Private Key).
+    required: true
+    writes: magento.marketplace.password
+    validate:
+      preset: non-empty
+
+  - id: locale-code
+    type: input
+    title: Store locale
+    description: Locale code (xx_XX) — e.g. en_US (default), ru_RU, de_DE, fr_FR, es_ES. Passed to setup:install --language.
+    required: true
+    writes: magento.locale.code
+    validate:
+      regex: "^[a-z]{2}_[A-Z]{2}$"
+
+  - id: store-currency
+    type: input
+    title: Base currency
+    description: ISO 4217 code (XXX) — e.g. USD (default), EUR, RUB, GBP. Passed to setup:install --currency.
+    required: true
+    writes: magento.currency.base
+    validate:
+      regex: "^[A-Z]{3}$"
+
+  - id: store-timezone
+    type: input
+    title: Store timezone
+    description: IANA timezone — e.g. UTC (default), Europe/Moscow, America/New_York, Asia/Tokyo. Passed to setup:install --timezone.
+    required: true
+    writes: magento.locale.timezone
+    validate:
+      regex: "^[A-Za-z]+(?:/[A-Za-z0-9_+-]+)*$"

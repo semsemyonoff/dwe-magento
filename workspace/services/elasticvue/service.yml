@@ -1,0 +1,10 @@
+# Elasticvue — lightweight OpenSearch/Elasticsearch GUI. Optional tool.
+type: tool
+container: elasticvue
+icon: "🔎"
+compose:
+  - compose/tools/elasticvue.yml
+ports:
+  http: 8026
+hosts:
+  web: elasticvue.localhost

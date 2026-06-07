@@ -1,0 +1,41 @@
+group:
+  title: Magento Indexer
+  description: Magento indexer helpers (`bin/magento indexer:*`) for the Magento service
+
+commands:
+  reindex:
+    type: service_exec
+    description: Reindex all (or one named) indexer (`bin/magento indexer:reindex [index]`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      index:
+        type: string
+        description: Indexer id to reindex (omit to reindex everything)
+        pattern: ^[a-z_]+$
+    cmd: "bin/magento indexer:reindex{{ with .Params.index }} {{ . }}{{ end }}"
+
+  status:
+    type: service_exec
+    description: Show indexer status (`bin/magento indexer:status`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "indexer:status"]
+
+  info:
+    type: service_exec
+    description: List available indexers (`bin/magento indexer:info`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "indexer:info"]
+
+  reset:
+    type: service_exec
+    description: Invalidate indexers so they rebuild on next run (`bin/magento indexer:reset`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "indexer:reset"]

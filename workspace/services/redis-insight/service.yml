@@ -1,0 +1,18 @@
+# RedisInsight — Redis GUI, seeded with the Magento cache/session DBs. Optional tool.
+# Seeding (EULA + DB registration) is done post-up by services.redis-insight.init,
+# wired into workspace/lifecycle.yml; toggling restarts so the run pipeline re-seeds.
+type: tool
+container: redis-insight
+icon: "🧰"
+compose:
+  - compose/tools/redis-insight.yml
+ports:
+  http: 5540
+hosts:
+  web: redis.localhost
+info:
+  title: Redis Insight
+on_enable:
+  requires: restart
+on_disable:
+  requires: restart

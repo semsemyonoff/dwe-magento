@@ -1,0 +1,64 @@
+group:
+  title: Magento Modules
+  description: Magento module helpers (`bin/magento module:*`) for the Magento service
+
+commands:
+  enable:
+    type: service_exec
+    description: Enable a Magento module (`bin/magento module:enable <Name>`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      name:
+        type: string
+        description: Module name (e.g. Magento_Catalog)
+        required: true
+        pattern: ^[A-Za-z0-9_]+$
+    argv: [bin/magento, "module:enable", "${param.name}"]
+
+  disable:
+    type: service_exec
+    description: Disable a Magento module (`bin/magento module:disable <Name>`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    params:
+      name:
+        type: string
+        description: Module name (e.g. Magento_TwoFactorAuth)
+        required: true
+        pattern: ^[A-Za-z0-9_]+$
+    argv: [bin/magento, "module:disable", "${param.name}"]
+
+  status:
+    type: service_exec
+    description: List modules and their enabled/disabled status (`bin/magento module:status`)
+    service: app-magento
+    mode: exec-or-run
+    workdir_from: services.magento.work_dir_internal
+    argv: [bin/magento, "module:status"]
+
+  2fa-disable:
+    type: workflow
+    description: Disable the admin two-factor-auth modules and flush the cache (handy for local dev)
+    steps:
+      - command: services.magento.module.disable
+        with:
+          name: Magento_AdminAdobeImsTwoFactorAuth
+      - command: services.magento.module.disable
+        with:
+          name: Magento_TwoFactorAuth
+      - command: services.magento.cache.flush
+
+  2fa-enable:
+    type: workflow
+    description: Re-enable the admin two-factor-auth modules and flush the cache
+    steps:
+      - command: services.magento.module.enable
+        with:
+          name: Magento_AdminAdobeImsTwoFactorAuth
+      - command: services.magento.module.enable
+        with:
+          name: Magento_TwoFactorAuth
+      - command: services.magento.cache.flush

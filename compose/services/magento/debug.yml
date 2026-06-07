@@ -1,0 +1,28 @@
+# Overlay: app-magento-debug — PHP-FPM container with Xdebug enabled.
+# Enabled when services.magento-debug.enabled = true in dwe config.
+# Mounts services/magento/runtime for profiler output and Xdebug traces.
+# Also overrides nginx DEBUG_BACKEND so xdebug-cookie requests route here.
+
+services:
+  nginx:
+    environment:
+      DEBUG_BACKEND: app-magento-debug
+
+  app-magento-debug:
+    extends:
+      file: docker-compose.yml
+      service: app-magento
+    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-app-magento-debug"
+    hostname: magento-debug
+    env_file:
+      - ./configs/env/default.env
+      - ./configs/env/debug.env
+    volumes:
+      - ./services/magento/runtime:/tmp
+    environment:
+      PHP_ENABLE_XDEBUG: "true"
+      DBGP_IDEKEY: "${XDEBUG_IDEKEY:-PHPSTORM}"
+      PHP_IDE_CONFIG: "serverName=${APP_HOST:-magento.localhost}"
+    depends_on:
+      app-magento:
+        condition: service_started

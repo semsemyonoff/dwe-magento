@@ -1,0 +1,12 @@
+# nginx — front reverse proxy / web entry point (part of the base docker-compose.yml).
+# Owns the published HTTP port (:80); the app and every tool route through it by
+# hostname (server_name per host in configs/nginx/templates/**). Registering it as
+# an infra service makes `dwe info` auto-detect it as the `port_via` proxy, so app
+# and tool services render their real hostnames (http://magento.localhost, …)
+# instead of bare http://localhost:<port>.
+type: infra
+container: nginx
+icon: "🌐"
+required: true
+ports:
+  http: 80

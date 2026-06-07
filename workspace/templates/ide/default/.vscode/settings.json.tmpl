@@ -1,0 +1,14 @@
+{
+  "php.validate.executablePath": "/usr/local/bin/php",
+  "php.suggest.basic": false,
+  "editor.formatOnSave": true,
+  "[php]": {
+    "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+  },
+  "intelephense.environment.phpVersion": "8.5",
+
+  // Magento XML schema autocompletion (redhat.vscode-xml). Active only once the
+  // catalog is generated — `dwe cmd services.magento.dev.urn-generate --set
+  // ide=vscode` (or set magento.ide.urn). A missing catalog is ignored.
+  "xml.catalogs": ["urn-catalog.xml"]
+}
