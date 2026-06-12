@@ -1,0 +1,6 @@
+# hadolint configuration — consumed by `dwe validate linters hadolint`
+# (dwe invokes the `hadolint` binary from the project root, which auto-reads this file).
+ignored:
+  # DL3008: pin apt-get package versions. Deliberately not enforced — this is a
+  # dev image; pinning ~20 dev-library versions is unmaintainable and brittle.
+  - DL3008

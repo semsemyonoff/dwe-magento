@@ -1,15 +1,15 @@
-FROM alpine AS unpack
+FROM alpine:3.22 AS unpack
 WORKDIR /unpack
 ARG COMPOSER_VER=2.10.1
 ARG N98_MAGERUN2_VER=9.5.1
-RUN wget https://getcomposer.org/download/${COMPOSER_VER}/composer.phar -O composer \
-  && wget https://files.magerun.net/n98-magerun2-${N98_MAGERUN2_VER}.phar -O n98-magerun2
+RUN wget -q https://getcomposer.org/download/${COMPOSER_VER}/composer.phar -O composer \
+  && wget -q https://files.magerun.net/n98-magerun2-${N98_MAGERUN2_VER}.phar -O n98-magerun2
 
 FROM php:8.5-fpm
 
 # System dependencies (libraries needed by the PHP extensions below + dev tools)
 RUN apt-get update \
-  && apt-get install -y \
+  && apt-get install -y --no-install-recommends \
     libzip-dev \
     libpng-dev \
     libjpeg-dev \
@@ -81,5 +81,9 @@ ENV PHP_ENABLE_XDEBUG=false
 
 # PHP SPX profiler (built from source, web UI exposed via SPX_KEY)
 ARG SPX_VER=0.4.22
-RUN cd /usr/lib && git clone --depth 1 --branch v${SPX_VER} https://github.com/NoiseByNorthwest/php-spx.git
-RUN cd /usr/lib/php-spx && phpize && ./configure && make && make install
+WORKDIR /usr/lib
+RUN git clone --depth 1 --branch v${SPX_VER} https://github.com/NoiseByNorthwest/php-spx.git
+WORKDIR /usr/lib/php-spx
+RUN phpize && ./configure && make && make install
+# Restore the php:8.5-fpm default working directory
+WORKDIR /var/www/html

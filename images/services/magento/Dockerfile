@@ -20,15 +20,14 @@ ENV UPLOAD_MAX_FILESIZE=64M
 COPY misc/php-fpm.ini /usr/local/etc/php/conf.d/zz-config.ini
 COPY misc/php-fpm.conf /usr/local/etc/
 
-# Fix user for Linux
+# Fix user for Linux (+ chsh for VSCode)
 ARG UID=1000
 ARG GID=1000
-RUN usermod -d /home/www-data www-data
-RUN usermod -u ${UID} www-data && groupmod -g ${GID} www-data
-RUN usermod -aG sudo www-data
-RUN echo "%sudo ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nopasswd
-# Fix for VSCode
-RUN chsh -s /bin/bash www-data
+RUN usermod -d /home/www-data www-data \
+  && usermod -u ${UID} www-data && groupmod -g ${GID} www-data \
+  && usermod -aG sudo www-data \
+  && echo "%sudo ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nopasswd \
+  && chsh -s /bin/bash www-data
 
 # Set magento variables
 ENV COMPOSER_HOME /home/www-data/.composer
