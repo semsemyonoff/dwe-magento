@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Sample Data
   description: Magento sample-data helpers for the Magento service
 

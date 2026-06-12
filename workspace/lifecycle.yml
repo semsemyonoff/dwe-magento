@@ -4,10 +4,11 @@
 # pipeline (auto-reap daemons + docker down). The run pipeline mirrors the
 # default (docker up --wait, show info) and adds a post-up `tools-init` phase
 # that bootstraps optional tools which need API seeding after they are healthy.
+#
+# Self-update policy is no longer set here: the former `run.update` block moved
+# to the formalized top-level `update:` block (see workspace/defaults.yml).
 
 run:
-  update:
-    mode: off
   show_info: true
   final_message: "Project is ready for work!"
   phases:

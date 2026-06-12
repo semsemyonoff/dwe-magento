@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Logs
   description: Inspect and manage Magento log files inside the app-magento container (/workspace/src/var/log)
 

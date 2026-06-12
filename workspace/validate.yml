@@ -1,0 +1,29 @@
+# Project-level readiness checks (preflight + `dwe validate`).
+# Host probes (docker/git/shell/ports) are hardcoded; this file adds the
+# project-specific checks. See `dwe docs show reference/config/validate --lang en`.
+
+checks:
+  # The Marketplace credentials are required to download Magento (composer
+  # authenticates against repo.magento.com). They are blank in defaults.yml and
+  # must be filled per-developer in workspace/local.yml — written by the setup
+  # wizard or by hand. `config_keys_present` treats an empty string as missing,
+  # so this fails until both are actually set.
+  #
+  # stages: [post-setup] (NOT [deploy]) — the value is written by the wizard into
+  # local.yml, so the check must run only at the final preflight (after the
+  # wizard, or immediately before `dwe deploy run`), never at the pre-wizard gate.
+  - id: marketplace-credentials-set
+    description: Magento Marketplace credentials (vars.magento.marketplace.*) must be set
+    stages: [post-setup]
+    severity: error
+    hint: |
+      Set vars.magento.marketplace.username / .password in workspace/local.yml,
+      or run `dwe deploy` and complete the setup wizard. Get the keys at
+      https://commerce.adobe.com → My Profile → Access Keys (Public Key =
+      username, Private Key = password).
+    type: builtin
+    cmd: config_keys_present
+    with:
+      keys:
+        - vars.magento.marketplace.username
+        - vars.magento.marketplace.password

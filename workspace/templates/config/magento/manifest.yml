@@ -1,0 +1,9 @@
+# Config render pack for the magento service (dwe render config / the
+# service_configs_render deploy builtin). Renders env.php straight into the
+# application tree (services/magento/src, dir-mounted into the container at
+# /workspace) — no configs bind-mount, no entrypoint copy. The deploy render
+# step is gated `when: file-missing` so it writes once; thereafter Magento owns
+# the live file (it appends the install marker).
+render:
+  - from: env.tmpl
+    to: src/app/etc/env.php

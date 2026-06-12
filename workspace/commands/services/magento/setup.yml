@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Setup
   description: Magento `bin/magento setup:*` helpers for the Magento service
 
@@ -17,37 +20,37 @@ commands:
       language:
         type: string
         description: Store language / locale code (e.g. en_US)
-        default_from: magento.locale.code
+        default_from: vars.magento.locale.code
       currency:
         type: string
         description: Base currency code (e.g. USD)
-        default_from: magento.currency.base
+        default_from: vars.magento.currency.base
       timezone:
         type: string
         description: Store timezone (e.g. UTC)
-        default_from: magento.locale.timezone
+        default_from: vars.magento.locale.timezone
     argv:
       - bin/magento
       - setup:install
-      - "--base-url=${magento.base_url}"
+      - "--base-url=${vars.magento.base_url}"
       - "--db-host=db"
-      - "--db-name=${db.database}"
-      - "--db-user=${db.user}"
-      - "--db-password=${db.password}"
-      - "--admin-firstname=${admin.name}"
-      - "--admin-lastname=${admin.name}"
-      - "--admin-email=${admin.email}"
-      - "--admin-user=${admin.login}"
-      - "--admin-password=${admin.password}"
+      - "--db-name=${vars.db.database}"
+      - "--db-user=${vars.db.user}"
+      - "--db-password=${vars.db.password}"
+      - "--admin-firstname=${vars.admin.name}"
+      - "--admin-lastname=${vars.admin.name}"
+      - "--admin-email=${vars.admin.email}"
+      - "--admin-user=${vars.admin.login}"
+      - "--admin-password=${vars.admin.password}"
       - "--language=${param.language}"
       - "--currency=${param.currency}"
       - "--timezone=${param.timezone}"
-      - "--use-rewrites=${magento.use_rewrites}"
-      - "--search-engine=${search.engine}"
-      - "--opensearch-host=${search.hostname}"
-      - "--opensearch-port=${search.port}"
-      - "--opensearch-index-prefix=${search.index_prefix}"
-      - "--opensearch-timeout=${search.timeout}"
+      - "--use-rewrites=${vars.magento.use_rewrites}"
+      - "--search-engine=${vars.search.engine}"
+      - "--opensearch-host=${vars.search.hostname}"
+      - "--opensearch-port=${vars.search.port}"
+      - "--opensearch-index-prefix=${vars.search.index_prefix}"
+      - "--opensearch-timeout=${vars.search.timeout}"
 
   upgrade:
     type: service_exec

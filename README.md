@@ -26,7 +26,7 @@ a project's `docker-compose.yml` rather than replacing it. On top of plain Compo
 - [Docker](https://docs.docker.com/get-docker/) (Desktop or Engine) with Compose v2
 - The `dwe` CLI on your `PATH` (run `dwe --version` to confirm)
 - Magento Marketplace (repo.magento.com) access keys. They are **not** committed —
-  set `magento.marketplace.username` / `password` in `workspace/local.yml`
+  set `vars.magento.marketplace.username` / `password` in `workspace/local.yml`
   (copy `workspace/local.example.yml`). Deploy generates `auth.json` from them.
 - The hostnames below resolve to `127.0.0.1`. `*.localhost` resolves automatically
   on most systems; otherwise add them to `/etc/hosts`.
@@ -36,7 +36,7 @@ a project's `docker-compose.yml` rather than replacing it. On top of plain Compo
 On a fresh checkout, run `dwe deploy` (no subcommand) — the **setup wizard** prompts
 for your Marketplace credentials and the store locale, writes them to `workspace/local.yml`,
 and proceeds. (Or skip the wizard: `cp workspace/local.example.yml workspace/local.yml`
-and fill in `magento.marketplace.{username,password}` by hand.)
+and fill in `vars.magento.marketplace.{username,password}` by hand.)
 
 ```bash
 dwe deploy         # interactive: setup wizard (creds + locale) → deploy

@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Dev
   description: Magento developer helpers (URN catalog, REPL, template hints, query log, DI info)
 
@@ -66,7 +69,7 @@ commands:
         type: string
         widget: select
         description: Target IDE — phpstorm, vscode, or all
-        default_from: magento.ide.urn
+        default_from: vars.magento.ide.urn
         required: true
         options:
           - { value: phpstorm, label: "PhpStorm (.idea/misc.xml)" }

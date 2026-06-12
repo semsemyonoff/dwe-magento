@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Modules
   description: Magento module helpers (`bin/magento module:*`) for the Magento service
 

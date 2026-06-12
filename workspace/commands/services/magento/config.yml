@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Config
   description: Magento store configuration helpers (core_config_data) for the Magento service
 
@@ -29,12 +32,12 @@ commands:
         default: "0"
         pattern: ^[0-9]+$
     env:
-      MYSQL_PWD: "${db.password}"
+      MYSQL_PWD: "${vars.db.password}"
     messages:
       success: "Config `${param.path}` (scope ${param.scope}/${param.scope_id}) set to `${param.value}`."
       error: "Failed to set config `${param.path}`."
     cmd: >-
-      mariadb -u${db.user} -D ${db.database}
+      mariadb -u${vars.db.user} -D ${vars.db.database}
       -e "INSERT INTO core_config_data (scope, scope_id, path, value)
       VALUES ('${param.scope}', '${param.scope_id}', '${param.path}', '${param.value}')
       ON DUPLICATE KEY UPDATE value = '${param.value}';"
@@ -58,7 +61,7 @@ commands:
     steps:
       - command: services.magento.mode.set
         with:
-          mode: "${magento.mode}"
+          mode: "${vars.magento.mode}"
       - command: services.magento.config.set
         with:
           path: admin/usage/enabled
@@ -70,35 +73,35 @@ commands:
       - command: services.magento.config.set
         with:
           path: system/smtp/host
-          value: "${mail.host}"
+          value: "${vars.mail.host}"
       - command: services.magento.config.set
         with:
           path: system/smtp/port
-          value: "${mail.port}"
+          value: "${vars.mail.port}"
       - command: services.magento.config.set
         with:
           path: general/locale/firstday
-          value: "${magento.locale.firstday}"
+          value: "${vars.magento.locale.firstday}"
       - command: services.magento.config.set
         with:
           path: general/locale/weight_unit
-          value: "${magento.locale.weight_unit}"
+          value: "${vars.magento.locale.weight_unit}"
       - command: services.magento.config.set
         with:
           path: msp_securitysuite_recaptcha/frontend/enabled
-          value: "${magento.recaptcha.frontend}"
+          value: "${vars.magento.recaptcha.frontend}"
       - command: services.magento.config.set
         with:
           path: msp_securitysuite_recaptcha/backend/enabled
-          value: "${magento.recaptcha.backend}"
+          value: "${vars.magento.recaptcha.backend}"
       - command: services.magento.config.set
         with:
           path: admin/security/session_lifetime
-          value: "${magento.admin_security.session_lifetime}"
+          value: "${vars.magento.admin_security.session_lifetime}"
       - command: services.magento.config.set
         with:
           path: admin/security/password_lifetime
-          value: "${magento.admin_security.password_lifetime}"
+          value: "${vars.magento.admin_security.password_lifetime}"
 
   search:
     type: workflow
@@ -107,21 +110,21 @@ commands:
       - command: services.magento.config.set
         with:
           path: catalog/search/engine
-          value: "${search.engine}"
+          value: "${vars.search.engine}"
       - command: services.magento.config.set
         with:
           path: catalog/search/opensearch_server_hostname
-          value: "${search.hostname}"
+          value: "${vars.search.hostname}"
       - command: services.magento.config.set
         with:
           path: catalog/search/opensearch_server_port
-          value: "${search.port}"
+          value: "${vars.search.port}"
       - command: services.magento.config.set
         with:
           path: catalog/search/opensearch_index_prefix
-          value: "${search.index_prefix}"
+          value: "${vars.search.index_prefix}"
       - command: services.magento.config.set
         with:
           path: catalog/search/opensearch_server_timeout
-          value: "${search.timeout}"
+          value: "${vars.search.timeout}"
       - command: services.magento.cache.flush

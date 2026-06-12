@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Catalog
   description: Magento catalog helpers (`bin/magento catalog:*`) for the magento service
 

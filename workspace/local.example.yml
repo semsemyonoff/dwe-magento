@@ -2,26 +2,31 @@
 # Copy this file to local.yml and adjust as needed.
 # local.yml is NOT tracked by git.
 
-# REQUIRED — Magento Marketplace (repo.magento.com) access keys. Deploy generates
-# services/magento/home/.composer/auth.json from these so composer can download
-# Magento. Get them at https://commerce.adobe.com → My Profile → Access Keys
-# (Public Key = username, Private Key = password). `dwe deploy run` fails fast
-# if they are blank.
-magento:
-  marketplace:
-    username: ""
-    password: ""
-  # Optional locale overrides (defaults: en_US / USD / UTC). These feed
-  # `setup:install`; you can also override per-run, e.g.
-  # `dwe cmd services.magento.setup.install --set language=ru_RU --set currency=RUB`.
-  # Example: switch the store to Russian.
-  # locale:
-  #   code: ru_RU
-  #   timezone: Europe/Moscow
-  # currency:
-  #   base: RUB
-  #   default: RUB
-  #   allow: RUB
+# Free-form, project-specific values live under the strict-root `vars:` sandbox
+# (the merged config root only allows project/runtime/state/exports/compose/
+# ui/docs/services/vars/update/bridge). Everything that used to sit at the root
+# of this file — magento.*, db.*, debug.* — now nests under `vars:`.
+vars:
+  # REQUIRED — Magento Marketplace (repo.magento.com) access keys. Deploy generates
+  # services/magento/home/.composer/auth.json from these so composer can download
+  # Magento. Get them at https://commerce.adobe.com → My Profile → Access Keys
+  # (Public Key = username, Private Key = password). `dwe deploy run` fails fast
+  # if they are blank.
+  magento:
+    marketplace:
+      username: ""
+      password: ""
+    # Optional locale overrides (defaults: en_US / USD / UTC). These feed
+    # `setup:install`; you can also override per-run, e.g.
+    # `dwe cmd services.magento.setup.install --set language=ru_RU --set currency=RUB`.
+    # Example: switch the store to Russian.
+    # locale:
+    #   code: ru_RU
+    #   timezone: Europe/Moscow
+    # currency:
+    #   base: RUB
+    #   default: RUB
+    #   allow: RUB
 
 # Active state name, empty = no state.
 # state: staging
@@ -64,16 +69,16 @@ magento:
 #     search: 9201
 
 # Override database credentials if needed (default: root / root).
-# db:
-#   user: myuser
-#   password: mypassword
-
-# Override the Magento sample edition/version installed on first deploy.
-# magento:
-#   sample:
-#     edition: community
-#     version: 2.4.8-p4
-
-# Xdebug IDE key for cookie-based debug routing (default: PHPSTORM).
-# debug:
-#   idekey: VSCODE
+# Free-form values nest under vars: (same sandbox as the marketplace keys above).
+# vars:
+#   db:
+#     user: myuser
+#     password: mypassword
+#   # Override the Magento sample edition/version installed on first deploy.
+#   magento:
+#     sample:
+#       edition: community
+#       version: 2.4.8-p4
+#   # Xdebug IDE key for cookie-based debug routing (default: PHPSTORM).
+#   debug:
+#     idekey: VSCODE

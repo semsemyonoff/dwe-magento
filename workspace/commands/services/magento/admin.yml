@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Admin
   description: Magento admin-user helpers for the Magento service
 
@@ -13,27 +16,27 @@ commands:
       user:
         type: string
         description: Admin username
-        default_from: admin.login
+        default_from: vars.admin.login
         required: true
       password:
         type: string
         description: Admin password
-        default_from: admin.password
+        default_from: vars.admin.password
         required: true
       email:
         type: string
         description: Admin email
-        default_from: admin.email
+        default_from: vars.admin.email
         required: true
       firstname:
         type: string
         description: Admin first name
-        default_from: admin.name
+        default_from: vars.admin.name
         required: true
       lastname:
         type: string
         description: Admin last name
-        default_from: admin.name
+        default_from: vars.admin.name
         required: true
     argv:
       - bin/magento
@@ -54,7 +57,7 @@ commands:
       user:
         type: string
         description: Admin username to unlock
-        default_from: admin.login
+        default_from: vars.admin.login
         required: true
     argv: [bin/magento, "admin:user:unlock", "${param.user}"]
 

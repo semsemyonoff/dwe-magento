@@ -28,11 +28,6 @@ if [ "$UPDATE_UID_GID" = "true" ]; then
 fi
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Done"
 
-# Link the pre-seeded deployment config into place (bind-mounted at /tmp/app-configs).
-if [ -f /tmp/app-configs/env.php ] && [ -d /workspace/src/app/etc ]; then
-    ln -sf /tmp/app-configs/env.php /workspace/src/app/etc/env.php
-fi
-
 # Color prompt
 # shellcheck disable=SC2028
 grep -q '^PS1=' ~/.bashrc 2>/dev/null || echo "PS1='\\[\\e[1;31m\\]\\u@\\h:\\[\\e[1;34m\\]\\w\\[\\e[1;36m\\]\\[\\e[0m\\]\\$ '" >> ~/.bashrc

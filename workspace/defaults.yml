@@ -1,6 +1,11 @@
 # Versioned project defaults (layer 2 of the merged config).
 # Merged on top of workspace.yml and may be overridden by workspace/local.yml.
 # This file IS tracked by git.
+#
+# workspace.yml (layer 1) carries only project identity + the `update:`/`compose`
+# policy. This layer holds the bulky configuration: the `services` overlay,
+# `runtime`, the `vars:` sandbox, `exports:` (.env render spec) and `bridge:`
+# (host-bridge container-write policy).
 
 # Optional service toggles. Structural service definitions live in
 # workspace/services/<name>/service.yml. Required services (magento, and the base
@@ -21,9 +26,6 @@ services:
   varnish:
     enabled: false
 
-debug:
-  idekey: PHPSTORM
-
 runtime:
   use_https: false
   ports:
@@ -33,82 +35,109 @@ runtime:
   spx:
     path: "?SPX_KEY=dev&SPX_UI_URI=/"
 
-db:
-  database: magento
-  password: root
-  user: root
-  backup_dir: backups/db
+# Free-form, project-specific values. The merged config root is strict (only
+# project/runtime/state/exports/compose/ui/docs/services/vars/update/bridge are
+# allowed top-level keys), so every custom value lives under this single
+# sandbox. Reference these by dot-path with the `vars.` prefix: `${vars.db.user}`
+# in commands and config templates, `from: vars.db.database` in exports,
+# `.Raw.vars.magento.ide.urn` in deploy templates.
+vars:
+  debug:
+    idekey: PHPSTORM
 
-valkey:
-  host: valkey
-  port: 6379
+  # Database connection. host/database/user/password/table_prefix back the
+  # rendered Magento env.php (workspace/templates/config/magento/env.tmpl) and
+  # the db.* commands; they are container-writable via bridge.vars_writable.
+  db:
+    host: db
+    database: magento
+    password: root
+    user: root
+    table_prefix: ""
+    backup_dir: backups/db
 
-# Search — OpenSearch only (the legacy elasticsearch/opensearch engine choice
-# was removed during the migration; opensearch is the single supported engine).
-search:
-  engine: opensearch
-  hostname: opensearch
-  port: 9200
-  index_prefix: magento2
-  timeout: 15
+  # Valkey (Redis-protocol) cache + session backend. host/port back env.php.
+  valkey:
+    host: valkey
+    port: 6379
 
-# Magento admin user created by setup:install.
-admin:
-  name: Admin
-  login: admin
-  password: admin123
-  email: admin@example.com
+  # Search — OpenSearch only (the legacy elasticsearch/opensearch engine choice
+  # was removed during the migration; opensearch is the single supported engine).
+  search:
+    engine: opensearch
+    hostname: opensearch
+    port: 9200
+    index_prefix: magento2
+    timeout: 15
 
-# Magento application settings applied during deploy (setup:install flags +
-# core_config_data writes in the prepare-config step).
-magento:
-  mode: developer
-  base_url: http://magento.localhost/
-  use_rewrites: 1
-  image_tag: "8.5"
-  # repo.magento.com credentials (Adobe Commerce Marketplace access keys).
-  # REQUIRED — they are intentionally blank here and must be set in
-  # workspace/local.yml (gitignored). On deploy, the `app.auth-json` command
-  # generates services/magento/home/.composer/auth.json from these values so
-  # composer can authenticate against repo.magento.com.
-  # Get keys at https://commerce.adobe.com → My Profile → Access Keys
-  # (Public Key = username, Private Key = password).
-  marketplace:
-    username: ""
-    password: ""
-  sample:
-    edition: community
-    version: 2.4.9
-  locale:
-    code: en_US
-    timezone: UTC
-    firstday: 1
-    weight_unit: kgs
-  currency:
-    base: USD
-    default: USD
-    allow: USD
-  recaptcha:
-    frontend: 0
-    backend: 0
-  admin_security:
-    session_lifetime: 86400
-    password_lifetime: 0
-  # IDE URN catalog generation (bin/magento dev:urn-catalog:generate) on deploy.
-  # "" = off (default). Set to phpstorm | vscode | all to generate the XML
-  # autocompletion catalog into the service hub (.idea/misc.xml for PhpStorm,
-  # .vscode/urn-catalog.xml for VS Code) during the deploy finalize phase.
-  # Also runnable on demand:
-  #   dwe cmd services.magento.dev.urn-generate --set ide=phpstorm|vscode|all
-  ide:
-    urn: ""
+  # Magento admin user created by setup:install.
+  admin:
+    name: Admin
+    login: admin
+    password: admin123
+    email: admin@example.com
 
-mail:
-  host: mailpit
-  port: 1025
+  # Magento application settings applied during deploy (setup:install flags +
+  # core_config_data writes in the prepare-config step).
+  magento:
+    mode: developer
+    base_url: http://magento.localhost/
+    use_rewrites: 1
+    image_tag: "8.5"
+    # Admin route front name (env.php backend.frontName) — container-writable.
+    admin_frontname: admin
+    # repo.magento.com credentials (Adobe Commerce Marketplace access keys).
+    # REQUIRED — they are intentionally blank here and must be set in
+    # workspace/local.yml (gitignored). On deploy, the `app.auth-json` command
+    # generates services/magento/home/.composer/auth.json from these values so
+    # composer can authenticate against repo.magento.com.
+    # Get keys at https://commerce.adobe.com → My Profile → Access Keys
+    # (Public Key = username, Private Key = password).
+    marketplace:
+      username: ""
+      password: ""
+    sample:
+      edition: community
+      version: 2.4.9
+    locale:
+      code: en_US
+      timezone: UTC
+      firstday: 1
+      weight_unit: kgs
+    currency:
+      base: USD
+      default: USD
+      allow: USD
+    recaptcha:
+      frontend: 0
+      backend: 0
+    admin_security:
+      session_lifetime: 86400
+      password_lifetime: 0
+    # IDE URN catalog generation (bin/magento dev:urn-catalog:generate) on deploy.
+    # "" = off (default). Set to phpstorm | vscode | all to generate the XML
+    # autocompletion catalog into the service hub (.idea/misc.xml for PhpStorm,
+    # .vscode/urn-catalog.xml for VS Code) during the deploy finalize phase.
+    # The setup wizard (workspace/setup.yml) offers a select for this, default
+    # vscode. Also runnable on demand:
+    #   dwe cmd services.magento.dev.urn-generate --set ide=phpstorm|vscode|all
+    ide:
+      urn: ""
 
-compose:
-  base: docker-compose.yml
+  mail:
+    host: mailpit
+    port: 1025
+
+# Host-bridge container-write policy. `services.magento.bridge.enabled` (in
+# service.yml) opts the magento container into the bridge; this top-level block
+# is the project-wide allowlist of vars a containerized `dwe vars set` may write
+# back to the host local.yml. The env.php-backing infra params are writable so a
+# developer can retune them from inside the dev container (apply with a redeploy).
+bridge:
+  vars_writable:
+    - vars.db.*
+    - vars.valkey.*
+    - vars.magento.admin_frontname
 
 # Declarative export spec for the generated .env artifact.
 # dwe render env  →  reads exports.env and renders .env accordingly.
@@ -138,13 +167,13 @@ exports:
       format: int
 
     - name: DB_DATABASE
-      from: db.database
+      from: vars.db.database
 
     - name: DB_PASSWORD
-      from: db.password
+      from: vars.db.password
 
     - name: DB_USER
-      from: db.user
+      from: vars.db.user
 
     - name: VALKEY_PORT
       from: runtime.ports.valkey
@@ -155,7 +184,7 @@ exports:
       format: int
 
     - name: MAGENTO_IMAGE_TAG
-      from: magento.image_tag
+      from: vars.magento.image_tag
 
     - name: MAGENTO_VARNISH_PORT
       from: services.varnish.ports.http
@@ -231,7 +260,7 @@ exports:
       from: runtime.spx.path
 
     - name: XDEBUG_IDEKEY
-      from: debug.idekey
+      from: vars.debug.idekey
 
     - name: STATE
       from: state

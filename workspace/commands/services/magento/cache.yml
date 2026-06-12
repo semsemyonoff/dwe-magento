@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Cache
   description: Magento cache helpers (`bin/magento cache:*`) for the Magento service
 

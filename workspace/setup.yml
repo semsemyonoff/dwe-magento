@@ -10,7 +10,7 @@ questions:
     title: Magento Marketplace public key
     description: repo.magento.com username (Adobe Commerce → My Profile → Access Keys → Public Key). Required to download Magento.
     required: true
-    writes: magento.marketplace.username
+    writes: vars.magento.marketplace.username
     validate:
       preset: non-empty
 
@@ -19,7 +19,7 @@ questions:
     title: Magento Marketplace private key
     description: repo.magento.com password (Access Keys → Private Key).
     required: true
-    writes: magento.marketplace.password
+    writes: vars.magento.marketplace.password
     validate:
       preset: non-empty
 
@@ -28,7 +28,7 @@ questions:
     title: Store locale
     description: Locale code (xx_XX) — e.g. en_US (default), ru_RU, de_DE, fr_FR, es_ES. Passed to setup:install --language.
     required: true
-    writes: magento.locale.code
+    writes: vars.magento.locale.code
     validate:
       regex: "^[a-z]{2}_[A-Z]{2}$"
 
@@ -37,7 +37,7 @@ questions:
     title: Base currency
     description: ISO 4217 code (XXX) — e.g. USD (default), EUR, RUB, GBP. Passed to setup:install --currency.
     required: true
-    writes: magento.currency.base
+    writes: vars.magento.currency.base
     validate:
       regex: "^[A-Z]{3}$"
 
@@ -46,6 +46,23 @@ questions:
     title: Store timezone
     description: IANA timezone — e.g. UTC (default), Europe/Moscow, America/New_York, Asia/Tokyo. Passed to setup:install --timezone.
     required: true
-    writes: magento.locale.timezone
+    writes: vars.magento.locale.timezone
     validate:
       regex: "^[A-Za-z]+(?:/[A-Za-z0-9_+-]+)*$"
+
+  - id: ide-urn
+    type: select
+    title: IDE URN autocompletion catalog
+    # First option is the default selection → VS Code. (No "off" option: select
+    # values must be non-empty; to disable, set vars.magento.ide.urn to "" in
+    # workspace/local.yml — the deploy gate treats empty as off.)
+    description: Generate the XML URN catalog for IDE autocompletion on deploy (bin/magento dev:urn-catalog:generate). Choose your IDE.
+    required: true
+    writes: vars.magento.ide.urn
+    options:
+      - value: vscode
+        label: VS Code (default)
+      - value: phpstorm
+        label: PhpStorm
+      - value: all
+        label: Both — VS Code + PhpStorm

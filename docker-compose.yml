@@ -119,7 +119,6 @@ services:
       - ./services/magento/home:/home/www-data
       - vscode_server_magento:/home/www-data/.vscode-server
       - ~/.ssh:/home/www-data/.ssh:ro
-      - ./services/magento/configs:/tmp/app-configs
       - composer_cache:/home/www-data/.composer/cache
     environment:
       COMPOSER_CACHE_DIR: /home/www-data/.composer/cache

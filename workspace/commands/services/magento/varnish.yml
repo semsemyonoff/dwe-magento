@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Varnish
   description: Switch Magento's full-page-cache application between Varnish and the built-in cache
 

@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento System Info
   description: System inspection via n98-magerun2 (commands native bin/magento does not provide)
 

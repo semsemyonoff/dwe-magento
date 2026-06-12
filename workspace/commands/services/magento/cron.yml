@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Cron
   description: Magento cron helpers (`bin/magento cron:*`) for the magento service
 

@@ -7,9 +7,14 @@
 # gated on its own truth so a partial install is completed, never re-installed
 # over or stranded.
 #
-# "installed" truth = the magento `'install'` key appearing in the deployed
-# env.php (services/magento/configs/env.php, symlinked into src/app/etc/env.php).
-# setup:install writes it; its presence makes Magento refuse a second install.
+# "installed" truth = the magento `'install'` key appearing in the LIVE
+# src/app/etc/env.php. service_configs_render writes that file directly from
+# workspace/templates/config/magento/ — render-ONCE (gated `when: file-missing`),
+# so after install Magento owns the file and appends the install marker.
+# setup:install writes that marker; its presence makes Magento refuse a second
+# install — so every install gate greps the live src env.php. `dwe run`
+# auto-render is suppressed by the service's `generated: crypt_key` declaration,
+# so neither redeploy nor run ever clobbers the installed file.
 #
 # Step types (set on `type:`, payload in `cmd:`):
 #   shell    — host shell command (sh -c)
@@ -21,6 +26,9 @@ phases:
   - name: setup
     description: Prepare service directories and install the Magento application
     steps:
+      # Marketplace credentials are enforced by the post-setup preflight check
+      # (workspace/validate.yml → marketplace-credentials-set), which runs before
+      # any deploy step — so there is no in-pipeline guard here.
       - name: create-dirs
         type: builtin
         cmd: service_dirs_ensure
@@ -31,7 +39,7 @@ phases:
       - name: place-auth
         type: command
         cmd: app.auth-json
-        description: Generate the Magento marketplace auth.json (from magento.marketplace.*) so create-project can authenticate
+        description: Generate the Magento marketplace auth.json (from vars.magento.marketplace.*) so create-project can authenticate
         # Generate only when missing — never clobber a developer's own auth.json.
         when:
           type: builtin
@@ -48,21 +56,20 @@ phases:
           type: builtin
           cmd: "dir-empty services/magento/src"
 
-      - name: copy-configs
+      - name: render-configs
         type: builtin
-        cmd: service_configs_copy
+        cmd: service_configs_render
         with:
           service: magento
-          # `default` = copy only when the destination is missing; never clobber
-          # an existing env.php (after install it holds the generated install
-          # date, crypt key, and admin/search config).
-          mode: default
-        description: Copy the pre-seeded env.php into the hub (files declared in services.magento.configs)
-        check:
+        description: Render env.php into src/app/etc/env.php from vars.db.* / vars.valkey.* / vars.magento.admin_frontname
+        # Render-ONCE: only when the live env.php is absent. After install Magento
+        # owns the file (it appends the install marker); re-rendering would clobber
+        # it, so there is intentionally NO check: (which would force a re-run).
+        # `dwe run` auto-render is suppressed by the service's `generated:` block.
+        # Apply later vars/template edits with `dwe reset run` + `dwe deploy run`.
+        when:
           type: builtin
-          cmd: service_configs_check
-          with:
-            service: magento
+          cmd: "file-missing services/magento/src/app/etc/env.php"
 
       - name: chown-src
         type: command
@@ -98,7 +105,7 @@ phases:
         # installed"). After this step env.php gains the `'install'` key.
         when:
           type: shell
-          cmd: "! grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+          cmd: "! grep -q \"'install' =>\" services/magento/src/app/etc/env.php 2>/dev/null"
 
       - name: prepare-config
         type: command
@@ -107,7 +114,7 @@ phases:
         # Idempotent core_config_data upserts — only meaningful once installed.
         when:
           type: shell
-          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+          cmd: "grep -q \"'install' =>\" services/magento/src/app/etc/env.php 2>/dev/null"
 
       - name: disable-2fa
         type: command
@@ -115,7 +122,7 @@ phases:
         description: Disable the admin two-factor-auth modules (local dev convenience)
         when:
           type: shell
-          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+          cmd: "grep -q \"'install' =>\" services/magento/src/app/etc/env.php 2>/dev/null"
 
       - name: sample-data
         type: command
@@ -125,7 +132,7 @@ phases:
         # marker on success so re-runs skip it.
         when:
           type: shell
-          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null && test ! -f services/magento/src/var/.dwe-sampledata"
+          cmd: "grep -q \"'install' =>\" services/magento/src/app/etc/env.php 2>/dev/null && test ! -f services/magento/src/var/.dwe-sampledata"
 
       - name: di-compile
         type: command
@@ -134,7 +141,7 @@ phases:
         continue_on_error: true
         when:
           type: shell
-          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+          cmd: "grep -q \"'install' =>\" services/magento/src/app/etc/env.php 2>/dev/null"
 
       - name: reindex
         type: command
@@ -143,7 +150,7 @@ phases:
         continue_on_error: true
         when:
           type: shell
-          cmd: "grep -q \"'install' =>\" services/magento/configs/env.php 2>/dev/null"
+          cmd: "grep -q \"'install' =>\" services/magento/src/app/etc/env.php 2>/dev/null"
 
   - name: finalize
     description: Render hub-level IDE and AI-agent configs for this service
@@ -159,10 +166,10 @@ phases:
       - name: urn-generate
         type: command
         cmd: services.magento.dev.urn-generate
-        description: Generate the IDE URN catalog (magento.ide.urn) into the hub
+        description: Generate the IDE URN catalog (vars.magento.ide.urn) into the hub
         continue_on_error: true
-        # Off by default — runs only when magento.ide.urn is phpstorm|vscode|all.
+        # Off by default — runs only when vars.magento.ide.urn is phpstorm|vscode|all.
         # Magento is guaranteed installed here (finalize runs only after init).
         when:
           type: template
-          expr: '{{ ne .Raw.magento.ide.urn "" }}'
+          expr: '{{ ne .Raw.vars.magento.ide.urn "" }}'

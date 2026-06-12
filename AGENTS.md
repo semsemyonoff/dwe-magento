@@ -32,12 +32,16 @@ After editing a `service.yml`, configs, or the service `deploy.yml` → `dwe dep
 ## How this repo is configured
 
 - **3-layer config merge**, strict order, later wins, maps merge recursively:
-  `workspace.yml` (project identity only — `project.name`, `project.prefix`) → `workspace/defaults.yml` (versioned defaults: service toggles, runtime, search, admin, magento settings, exports, db) → `workspace/local.yml` (gitignored per-developer overrides; `local.example.yml` is the tracked template).
+  `workspace.yml` (project identity + lifecycle policy only — `project.name`, `project.prefix`, the `update:` block, `compose`) → `workspace/defaults.yml` (the bulky versioned defaults: the `services` toggle overlay, `runtime`, the `vars:` sandbox, `exports`, and the `bridge:` policy) → `workspace/local.yml` (gitignored per-developer overrides; `local.example.yml` is the tracked template).
+- **Strict root + `vars:` sandbox.** The merged config root is strict: only `project`, `runtime`, `state`, `exports`, `compose`, `ui`, `docs`, `services`, `vars`, `update`, `bridge` (and `schema_version`) are allowed top-level keys — any other top-level key, in any layer, is a hard load-time error. All free-form, project-specific settings (`db`, `valkey`, `search`, `admin`, `magento`, `mail`, `debug`) live under the `vars:` block and are referenced by dot-path with the `vars.` prefix: `${vars.db.user}` in commands, `from: vars.db.database` in exports, `{{ .Raw.vars.magento.ide.urn }}` in deploy templates. Inspect them with `dwe vars list|get|set`.
+- **Self-update** is controlled by the top-level `update.mode` (`on` | `off`; absent = off) set in `workspace.yml` (developer may override in `local.yml`) — **not** under `run:` in `lifecycle.yml`.
+- **Host bridge.** The `magento` service opts into the bridge (`services.magento.bridge.enabled: true` in its `service.yml`), and every `services.magento.*` command file carries a group-level `bridge: { enabled: true, services: [magento] }` so the whole magento command surface is reachable from inside the dev container. The top-level `bridge.vars_writable` allowlist (in `defaults.yml`) governs which `vars.*` a containerized `dwe vars set` may write back to `local.yml` (`vars.db.*`, `vars.valkey.*`, `vars.magento.admin_frontname`).
+- **env.php is render-based — written straight into `src/`.** `configs/services/magento/env.php` was removed and there is **no `configs` bind-mount / entrypoint copy** anymore: the deploy `service_configs_render` builtin renders `workspace/templates/config/magento/env.tmpl` directly to `src/app/etc/env.php` (`${vars.db.*}` / `${vars.valkey.*}` / `${vars.magento.admin_frontname}` / `${services.magento.hosts.web}`; crypt key + Magento-structural values kept literal). It is **render-once** — the deploy step is gated `when: file-missing …/src/app/etc/env.php`, and `dwe run` auto-render is **suppressed** by the service's `generated: crypt_key` declaration (a Magento-minted secret kept out of the dwe store) — so Magento owns the live file after install and the install marker is never clobbered. Apply later vars/template edits with `dwe reset run` + `dwe deploy run`.
 - **Services** are declared one-per-folder in `workspace/services/<name>/service.yml`, loaded separately and injected into the merged map. A `type:` discriminator (`app` / `tool` / `infra`) selects allowed fields. `required: true` services are always on (`magento`); optional ones toggle via `services.<name>.enabled`. Per-service `ports:` / `hosts:` deep-merge by entry name.
 - **`.env` is a generated artifact** (`dwe render env --out .env`), never edited by hand. Every variable is declared explicitly in `defaults.yml` under `exports.env` (`name` + `from` dot-path + optional `format` / `when` / `default`). No magic name mapping.
 - **Docker/Compose policy** lives in `workspace/docker.yml` (loaded separately, not part of the 3-layer merge). This project keeps it minimal — only the shared `composer_cache` volume; everything else uses DWE defaults (project name `dwe-magento`, etc.).
 - **Declarative commands** live in `workspace/commands/` — one file per group, subdirectories nest groups. Command IDs derive from path + filename + key (`workspace/commands/services/magento/cache.yml` → `services.magento.cache.*`).
-- **Service hub model:** on deploy, each service gets a hub under `services/<name>/` (gitignored): `src/` (the Magento code), `configs/` (the deployed `env.php`), `home/` (composer home, incl. `auth.json`), `runtime/`, plus generated `.devcontainer/` / `.vscode/` / `AGENTS.md`.
+- **Service hub model:** on deploy, each service gets a hub under `services/<name>/` (gitignored): `src/` (the Magento code, incl. the rendered `app/etc/env.php`), `home/` (composer home, incl. `auth.json`), `runtime/`, plus generated `.devcontainer/` / `.vscode/` / `AGENTS.md`.
 
 ### Always-on infrastructure vs optional services
 
@@ -67,13 +71,15 @@ This project defines two pipeline files:
 - **`workspace/services/magento/deploy.yml`** — the per-service deploy pipeline.
 - **`workspace/lifecycle.yml`** — a `run:`-only lifecycle that mirrors the default (`docker up --wait`, show info) and adds a post-up `tools-init` phase. That phase runs `services.redis-insight.init` (when the tool is enabled) to accept the RedisInsight EULA and register the Magento cache/session Valkey DBs via its API — replacing the old one-shot init container. `dwe stop` still uses the built-in default.
 
-It also defines **`workspace/setup.yml`** — the interactive deploy **wizard**. On a fresh checkout (no/empty `local.yml`), `dwe deploy` prompts for the required Marketplace credentials and the store locale/currency/timezone, then writes them into `local.yml` and proceeds. (`magento.marketplace.*`, `magento.locale.*`, `magento.currency.base`.)
+It also defines **`workspace/setup.yml`** — the interactive deploy **wizard**. On a fresh checkout (no/empty `local.yml`), `dwe deploy` prompts for the required Marketplace credentials, the store locale/currency/timezone, and the IDE URN catalog target (a `select`, default VS Code), then writes them into `local.yml` (under `vars:`) and proceeds. (`vars.magento.marketplace.*`, `vars.magento.locale.*`, `vars.magento.currency.base`, `vars.magento.ide.urn`.)
+
+And **`workspace/validate.yml`** — project preflight checks. The `marketplace-credentials-set` check (`stages: [post-setup]`, builtin `config_keys_present`) fails the preflight unless `vars.magento.marketplace.{username,password}` resolve to non-empty values — caught before any deploy step on `dwe deploy run`, and surfaced by `dwe validate`. (`post-setup`, not `deploy`, so it runs after the wizard writes `local.yml`, not at the pre-wizard gate.)
 
 It has no orchestrator `deploy.yml`, no `reset.yml`, no `info.yml` — so `dwe deploy run`, `dwe reset run`, and `dwe info` use DWE's built-in defaults. (`dwe validate` reports these as informational ⓘ, not errors.)
 
 ## Lifecycle
 
-- `dwe deploy run` — full deploy: ensure hub dirs, generate `auth.json` (from `magento.marketplace.*`), install Magento via `composer create-project` (community sample edition), copy `env.php`, chown src, bring the stack up & wait healthy (db/valkey/opensearch/app), create database, `setup:install` (against OpenSearch), apply store config, disable 2FA, deploy sample data, `di:compile`, reindex, render IDE/AI configs (and optionally the IDE URN catalog when `magento.ide.urn` is set). Run on first setup or after changing a service's config/deploy.
+- `dwe deploy run` — full deploy: ensure hub dirs, generate `auth.json` (from `vars.magento.marketplace.*`), install Magento via `composer create-project` (community sample edition), render `env.php` directly into `src/app/etc/` (render-once), chown src, bring the stack up & wait healthy (db/valkey/opensearch/app), create database, `setup:install` (against OpenSearch), apply store config, disable 2FA, deploy sample data, `di:compile`, reindex, render IDE/AI configs (and optionally the IDE URN catalog when `vars.magento.ide.urn` is set). Run on first setup or after changing a service's config/deploy.
 - `dwe run` / `dwe stop` / `dwe restart` — bring the stack up / down / cycle it.
 - `dwe docker up|down|logs|exec|ps` — raw Docker Compose passthroughs (state-tracked).
 - `dwe reset run` — destructive cleanup.
@@ -91,19 +97,20 @@ workspace/local.yml                      # local overrides (gitignored)
 workspace/local.example.yml              # tracked template for local overrides
 workspace/docker.yml                     # docker/compose execution policy (shared composer_cache volume)
 workspace/styles.yml                     # UI: ASCII header, Magento-orange palette, separator
-workspace/services/<name>/service.yml    # per-service declaration (type, container, icon, ports, hosts, dirs, cli, configs)
+workspace/services/<name>/service.yml    # per-service declaration (type, container, icon, ports, hosts, dirs, cli, render, bridge)
 workspace/services/magento/deploy.yml       # per-service deploy pipeline
 workspace/lifecycle.yml                  # run pipeline: docker up --wait + post-up tools-init (redis-insight seeding)
-workspace/setup.yml                      # interactive deploy wizard (Marketplace creds + locale) → writes local.yml
+workspace/setup.yml                      # interactive deploy wizard (Marketplace creds + locale + IDE URN) → writes local.yml
+workspace/validate.yml                   # preflight checks (post-setup: Marketplace creds must be set)
 workspace/commands/                      # declarative commands (see "Commands" below)
 workspace/scripts/db/*.sh                # scripts referenced by type:script commands (dump-create, dump-deploy)
 workspace/scripts/redis-insight/init.sh  # RedisInsight API seeding (run in a throwaway curl container)
-workspace/templates/{ai,git,ide}/        # render packs consumed by `dwe render`
+workspace/templates/{ai,config,git,ide}/ # render packs consumed by `dwe render` (config/magento/ renders env.php)
 docker-compose.yml                       # base compose: nginx, db, valkey, opensearch, app-magento (always on)
 compose/services/magento/debug.yml          # app-magento-debug container (Xdebug)
 compose/services/varnish.yml             # Varnish full-page cache (optional infra)
 compose/tools/{dbgate,mailpit,opensearch-dashboards,elasticvue,redis-insight}.yml  # optional tool overlays
-configs/services/magento/env.php            # pre-seeded Magento deployment config (copied into the hub on deploy)
+workspace/templates/config/magento/     # env.php render pack (env.tmpl + manifest.yml) — was configs/services/magento/env.php
 configs/nginx/…                          # nginx server + backend-map templates
 configs/opensearch/opensearch.yml        # OpenSearch node config
 configs/varnish/default.vcl              # Varnish VCL
@@ -161,6 +168,6 @@ Typed steps: each has a `type:` (`shell` / `dwe` / `command` / `builtin`) and `c
 ## Conventions
 
 - Cross-platform: must work on macOS and Linux (including WSL).
-- **Secrets:** Magento Marketplace (repo.magento.com) credentials are **not** committed. They live in `magento.marketplace.{username,password}` — blank in `defaults.yml`, set per-developer in the gitignored `workspace/local.yml`. On deploy the `app.auth-json` command renders them into `services/magento/home/.composer/auth.json` (also gitignored). `dwe deploy run` fails fast if they are unset. `.env` is generated and gitignored.
+- **Secrets:** Magento Marketplace (repo.magento.com) credentials are **not** committed. They live in `vars.magento.marketplace.{username,password}` — blank in `defaults.yml`, set per-developer in the gitignored `workspace/local.yml`. On deploy the `app.auth-json` command renders them into `services/magento/home/.composer/auth.json` (also gitignored). `dwe deploy run` fails fast if they are unset. `.env` is generated and gitignored.
 - `legacy/` is gitignored, reference-only — do not modify it.
 - Before editing any YAML under `workspace/`, confirm the schema with `dwe docs show reference/config/<area> --lang en` rather than guessing field shapes.

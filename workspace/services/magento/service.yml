@@ -19,11 +19,28 @@ info:
     - name: "Profiler (SPX)"
       path: "/?SPX_KEY=dev&SPX_UI_URI=/"
       icon: "⚡"
-configs:
-  - env.php
+# env.php is render-based (workspace/templates/config/magento/): the deploy
+# pipeline runs service_configs_render to write src/app/etc/env.php directly from
+# vars.db.* / vars.valkey.* / vars.magento.admin_frontname (no configs bind-mount).
+render:
+  config:
+    template: magento
+# crypt.key is a Magento service-minted secret. Declaring it `generated:` (without
+# a harvest step) keeps it out of the dwe store, which makes `dwe run` auto-render
+# SKIP this service — so re-running never blanks the secret or clobbers the
+# install marker Magento appends to the live env.php. The deploy render itself is
+# render-once (gated `when: file-missing` in deploy.yml).
+generated:
+  crypt_key:
+    file: src/app/etc/env.php
+    pattern: "'key' => '([^']*)'"
 dirs:
   - home
   - runtime
+# Opt this container into the host bridge so `dwe cmd services.magento.*`,
+# read-only diagnostics, and `dwe vars` work from inside the dev container.
+bridge:
+  enabled: true
 cli:
   mode: auto
   shell: bash

@@ -1,4 +1,7 @@
 group:
+  bridge:
+    enabled: true
+    services: [magento]
   title: Magento Mode
   description: Magento deploy-mode helpers (`bin/magento deploy:mode:*`) for the Magento service
 
@@ -21,7 +24,7 @@ commands:
       mode:
         type: string
         description: Target mode
-        default_from: magento.mode
+        default_from: vars.magento.mode
         required: true
         pattern: ^(developer|production|default)$
     argv: [bin/magento, "deploy:mode:set", "${param.mode}"]
