@@ -1,0 +1,38 @@
+# Baseline integration test: a clean `dwe deploy run` comes up healthy and
+# serves the storefront through nginx. Pins the optional toggles to the
+# tracked defaults.yml baseline (disabling anything a developer's local.yml
+# happens to have enabled) so the scenario is deterministic and stays fast
+# regardless of the working environment.
+#
+# No admin-login assertion here: `dwe test`'s port isolation always remaps
+# nginx to a non-default host port, so the Host header always carries that
+# port — and Magento's own admin router (independent of nginx/dwe, reproduced
+# by invoking pub/index.php directly) falls back to the storefront's
+# cms-no-route page whenever Host includes a port. The storefront route is
+# unaffected, so it stays covered below.
+description: "Clean deploy: core stack (nginx/db/valkey/opensearch/magento) comes up healthy and serves the storefront"
+
+env:
+  services:
+    disable: [dbgate, opensearch-dashboards, elasticvue, redis-insight, varnish]
+
+timeout: 30m
+
+steps:
+  - name: "core containers are running"
+    type: builtin
+    cmd: containers_running
+    with:
+      # Raw compose service names, not dwe service keys — the magento app
+      # container is named app-magento in docker-compose.yml.
+      services: [nginx, db, valkey, opensearch, app-magento]
+
+  - name: "storefront answers"
+    type: builtin
+    cmd: http_check
+    with:
+      url: "http://${services.magento.hosts.web}:${services.nginx.ports.http}/"
+      status: 200
+      retries: 10
+      interval: 2s
+      timeout: 5s

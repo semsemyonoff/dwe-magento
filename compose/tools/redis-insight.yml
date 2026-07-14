@@ -18,7 +18,6 @@ services:
       REDIS_INSIGHT_HOST: "${REDIS_INSIGHT_HOST:-redis.localhost}"
 
   redis-insight:
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-redis-insight"
     image: "${IMAGE_REDISINSIGHT:-redis/redisinsight:latest}"
     hostname: redis-insight
     restart: unless-stopped

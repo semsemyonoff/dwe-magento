@@ -11,7 +11,6 @@ services:
 
   mailpit:
     image: "${IMAGE_MAILPIT:-axllent/mailpit:latest}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-mailpit"
     restart: unless-stopped
     ports:
       - "${MAILPIT_PORT:-8025}:8025"

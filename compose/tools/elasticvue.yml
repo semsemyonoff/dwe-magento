@@ -11,7 +11,6 @@ services:
 
   elasticvue:
     image: "${IMAGE_ELASTICVUE:-cars10/elasticvue:latest}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-elasticvue"
     hostname: elasticvue
     restart: unless-stopped
     ports:

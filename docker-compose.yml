@@ -26,7 +26,6 @@ networks:
 services:
   nginx:
     image: "${IMAGE_NGINX:-nginx:1.28}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-nginx"
     restart: unless-stopped
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -46,7 +45,6 @@ services:
 
   db:
     image: "${IMAGE_DB:-mariadb:12.3}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-db"
     hostname: db
     restart: unless-stopped
     command: --max_allowed_packet=67108864
@@ -65,7 +63,6 @@ services:
 
   valkey:
     image: "${IMAGE_VALKEY:-valkey/valkey:9}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-valkey"
     hostname: valkey
     restart: unless-stopped
     ports:
@@ -79,7 +76,6 @@ services:
 
   opensearch:
     image: "${IMAGE_OPENSEARCH:-opensearchproject/opensearch:3}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-opensearch"
     hostname: opensearch
     restart: unless-stopped
     ports:
@@ -107,7 +103,6 @@ services:
         UID: "${UID:-1000}"
         GID: "${GID:-1000}"
         MAGENTO_IMAGE_TAG: "${MAGENTO_IMAGE_TAG:-8.5}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-app-magento"
     hostname: magento
     restart: unless-stopped
     working_dir: /workspace/src

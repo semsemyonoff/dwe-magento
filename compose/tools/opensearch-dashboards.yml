@@ -10,7 +10,6 @@ services:
 
   opensearch-dashboards:
     image: "${IMAGE_OPENSEARCH_DASHBOARDS:-opensearchproject/opensearch-dashboards:3}"
-    container_name: "${PROJECT_PREFIX:-dwe}-${PROJECT_NAME:-magento}-opensearch-dashboards"
     restart: unless-stopped
     ports:
       - "${OPENSEARCH_DASHBOARDS_PORT:-5612}:5601"
