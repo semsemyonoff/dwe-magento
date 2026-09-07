@@ -3,9 +3,9 @@
 # local.yml is NOT tracked by git.
 
 # Free-form, project-specific values live under the strict-root `vars:` sandbox
-# (the merged config root only allows project/runtime/state/exports/compose/
-# ui/docs/services/vars/update/bridge). Everything that used to sit at the root
-# of this file — magento.*, db.*, debug.* — now nests under `vars:`.
+# (the merged config root only allows schema_version/project/runtime/exports/
+# compose/docs/services/vars/update/bridge/stop/secrets). Everything that used to
+# sit at the root of this file — magento.*, db.*, debug.* — now nests under `vars:`.
 vars:
   # REQUIRED — Magento Marketplace (repo.magento.com) access keys. Deploy generates
   # services/magento/home/.composer/auth.json from these so composer can download
@@ -27,9 +27,6 @@ vars:
     #   base: RUB
     #   default: RUB
     #   allow: RUB
-
-# Active state name, empty = no state.
-# state: staging
 
 # Toggle optional services (apps and tools) without changing project defaults.
 # services:
