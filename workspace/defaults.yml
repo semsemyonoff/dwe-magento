@@ -28,10 +28,6 @@ services:
 
 runtime:
   use_https: false
-  ports:
-    db: 13306
-    valkey: 6379
-    search: 9200
   spx:
     path: "?SPX_KEY=dev&SPX_UI_URI=/"
 
@@ -42,6 +38,21 @@ runtime:
 # `${vars.db.user}` in commands and config templates, `from: vars.db.database`
 # in exports, `.Raw.vars.magento.ide.urn` in deploy templates.
 vars:
+  # Host ports for db / valkey / opensearch. These three run as plain compose
+  # services with no workspace/services/<name>/service.yml, so there is no
+  # `services.<name>.ports` map to declare them on — they live here, in the one
+  # sandbox the strict config root provides for free-form values.
+  #
+  # They used to sit under `runtime:`, which accepts only `use_https` and `spx`.
+  # The values still resolved (a `from:` dot-path reads the raw merged map, not
+  # the typed struct), so nothing was broken — but the block was never applied
+  # to the typed config, and `dwe validate` reported it as an unknown field,
+  # which was the last thing keeping `dwe validate --strict` red here.
+  ports:
+    db: 13306
+    valkey: 6379
+    search: 9200
+
   debug:
     idekey: PHPSTORM
 
@@ -163,7 +174,7 @@ exports:
       from: services.magento.hosts.web
 
     - name: DB_PORT
-      from: runtime.ports.db
+      from: vars.ports.db
       format: int
 
     - name: DB_DATABASE
@@ -176,11 +187,11 @@ exports:
       from: vars.db.user
 
     - name: VALKEY_PORT
-      from: runtime.ports.valkey
+      from: vars.ports.valkey
       format: int
 
     - name: SEARCH_PORT
-      from: runtime.ports.search
+      from: vars.ports.search
       format: int
 
     - name: MAGENTO_IMAGE_TAG

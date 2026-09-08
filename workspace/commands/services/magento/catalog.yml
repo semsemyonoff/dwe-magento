@@ -10,6 +10,4 @@ commands:
     type: service_exec
     description: Regenerate resized product images — needed after sample data / imports / theme changes (`bin/magento catalog:images:resize`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "catalog:images:resize"]

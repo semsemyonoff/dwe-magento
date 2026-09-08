@@ -10,8 +10,6 @@ commands:
     type: service_exec
     description: Create a Magento admin user (`bin/magento admin:user:create`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     params:
       user:
         type: string
@@ -51,8 +49,6 @@ commands:
     type: service_exec
     description: Unlock an admin account locked after failed logins (`bin/magento admin:user:unlock <user>`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     params:
       user:
         type: string
@@ -65,6 +61,4 @@ commands:
     type: service_exec
     description: List admin users (`n98-magerun2 admin:user:list`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [n98-magerun2, "admin:user:list"]

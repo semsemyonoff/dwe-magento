@@ -57,9 +57,16 @@ vars:
 #     ports:
 #       http: 8081
 
-# Override runtime flags / infra ports (db, valkey, search).
+# Override runtime flags.
 # runtime:
 #   use_https: true
+
+# Override the infra host ports (db, valkey, search). These live under `vars:`
+# because db / valkey / opensearch run as plain compose services with no
+# workspace/services/<name>/service.yml, so there is no `services.<name>.ports`
+# map to put them on. They used to sit under `runtime:`, which accepts only
+# `use_https` and `spx` — an override there is silently ignored.
+# vars:
 #   ports:
 #     db: 13307
 #     valkey: 6380

@@ -54,8 +54,6 @@ commands:
     description: Install PHP dependencies via Composer
     service: app-magento
     user: www-data
-    workdir_from: services.magento.work_dir_internal
-    mode: exec-or-run
     argv:
       - php
       - -d

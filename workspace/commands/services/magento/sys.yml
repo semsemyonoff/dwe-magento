@@ -10,14 +10,10 @@ commands:
     type: service_exec
     description: Print an overview of the Magento system — version, edition, modes, caches (`n98-magerun2 sys:info`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [n98-magerun2, "sys:info"]
 
   check:
     type: service_exec
     description: Run n98-magerun2's system health checks (`n98-magerun2 sys:check`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [n98-magerun2, "sys:check"]

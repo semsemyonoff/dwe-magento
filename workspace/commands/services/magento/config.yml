@@ -10,7 +10,6 @@ commands:
     type: service_exec
     description: Upsert a core_config_data row (INSERT ... ON DUPLICATE KEY UPDATE)
     service: db
-    mode: exec-or-run
     params:
       path:
         type: string
@@ -46,8 +45,6 @@ commands:
     type: service_exec
     description: Show stored system configuration values, all or under a path (`bin/magento config:show [path]`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     params:
       path:
         type: string

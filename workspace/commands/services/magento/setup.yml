@@ -10,8 +10,6 @@ commands:
     type: service_exec
     description: Install Magento against the OpenSearch search engine (`bin/magento setup:install`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     # OpenSearch is the only supported engine (the legacy elasticsearch/opensearch
     # choice was removed during the migration). Locale flags are optional params
     # defaulting from config (en_US / USD / UTC) — override per-install with e.g.
@@ -56,40 +54,30 @@ commands:
     type: service_exec
     description: Apply schema + data updates (`bin/magento setup:upgrade`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "setup:upgrade"]
 
   schema-upgrade:
     type: service_exec
     description: Apply schema updates only (`bin/magento setup:db-schema:upgrade`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "setup:db-schema:upgrade"]
 
   data-upgrade:
     type: service_exec
     description: Apply data updates only (`bin/magento setup:db-data:upgrade`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "setup:db-data:upgrade"]
 
   di-compile:
     type: service_exec
     description: Compile the dependency-injection configuration (`bin/magento setup:di:compile`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "setup:di:compile"]
 
   static-content-deploy:
     type: service_exec
     description: Deploy static view files; pass locales and use -f to force in developer mode (`bin/magento setup:static-content:deploy`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     params:
       locales:
         type: string
@@ -104,6 +92,4 @@ commands:
     type: service_exec
     description: Check whether the DB schema/data need an upgrade (`bin/magento setup:db:status`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "setup:db:status"]

@@ -51,7 +51,6 @@ commands:
     description: Install Magento via `composer create-project` (community sample edition) into the Magento service hub
     service: app-magento
     user: www-data
-    workdir_from: services.magento.work_dir_internal
     argv:
       - php
       - -d

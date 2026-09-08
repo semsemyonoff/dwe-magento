@@ -10,22 +10,16 @@ commands:
     type: service_exec
     description: Put the store into maintenance mode (`bin/magento maintenance:enable`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "maintenance:enable"]
 
   disable:
     type: service_exec
     description: Take the store out of maintenance mode (`bin/magento maintenance:disable`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "maintenance:disable"]
 
   status:
     type: service_exec
     description: Show maintenance-mode status (`bin/magento maintenance:status`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "maintenance:status"]

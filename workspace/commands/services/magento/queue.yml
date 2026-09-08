@@ -10,16 +10,12 @@ commands:
     type: service_exec
     description: List the registered message-queue consumers (`bin/magento queue:consumers:list`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     argv: [bin/magento, "queue:consumers:list"]
 
   start:
     type: service_exec
     description: Start a message-queue consumer, optionally bounded by message count (`bin/magento queue:consumers:start <name> [--max-messages=N]`)
     service: app-magento
-    mode: exec-or-run
-    workdir_from: services.magento.work_dir_internal
     params:
       name:
         type: string
