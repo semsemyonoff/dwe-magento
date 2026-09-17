@@ -134,6 +134,17 @@ DWE assembles the `-f` list deterministically: base first, then enabled **tool**
 
 ## Commands
 
+- `dwe commands list --output json` — before any task a declared command may
+  cover (tests, linters, formatters, builds, codegen, migrations, seeds, cache or
+  token management, package-manager scripts), make this call once per session and
+  again after `workspace/commands/` changes. A declared command that matches the
+  intent outranks the direct invocation: run it with `dwe cmd <id>`, inspect an
+  unfamiliar one with `dwe cmd -i <id> --output json`. Hand the exact call to the
+  user instead when it changes project or data state (migrations, seeds,
+  installs) or its inspect output shows `confirmation: true`. Do not invoke the
+  underlying npm/composer/make/docker command directly until that check has been
+  made
+
 | ID group | File | Commands |
 |----------|------|----------|
 | `app.*` | `commands/app.yml` | `auth-json` (generate Marketplace auth.json), `install` (composer create-project, sample edition) — both **private**, run from the deploy pipeline |
