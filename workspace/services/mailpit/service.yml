@@ -6,5 +6,6 @@ compose:
   - compose/tools/mailpit.yml
 ports:
   http: 8025
+  smtp: 1025
 hosts:
   web: mail.localhost

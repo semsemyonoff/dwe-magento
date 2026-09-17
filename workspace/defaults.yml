@@ -216,6 +216,11 @@ exports:
       format: int
       when: services.mailpit.enabled
 
+    - name: MAILPIT_SMTP_PORT
+      from: services.mailpit.ports.smtp
+      format: int
+      when: services.mailpit.enabled
+
     - name: MAILPIT_HOST
       from: services.mailpit.hosts.web
       when: services.mailpit.enabled
