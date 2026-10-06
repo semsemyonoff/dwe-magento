@@ -162,7 +162,7 @@ phases:
       - name: render-ai
         type: dwe
         cmd: "render ai magento"
-        description: Render AGENTS.md + CLAUDE.md symlink into the hub
+        description: Render AGENTS.md into the hub
       - name: urn-generate
         type: command
         cmd: services.magento.dev.urn-generate
